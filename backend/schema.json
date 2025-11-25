@@ -1,0 +1,125 @@
+{
+  "catalogs": [
+    {
+      "name": "diffCellSig",
+      "type": "postgresql",
+      "jdbc": {
+        "username": "postgres",
+        "password": "postgres",
+        "jdbcUri": "jdbc:postgresql://db:5432/diffCellSig",
+        "driverClass": "org.postgresql.Driver"
+      }
+    }
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "label": "node",
+        "oneToOne": {
+          "tableSource": {
+            "catalog": "diffCellSig",
+            "schema": "public",
+            "table": "nodes"
+          },
+          "id": {
+            "fields": [
+              {
+                "type": "Int",
+                "field": "id",
+                "alias": "id"
+              }
+            ]
+          },
+          "attributes": [
+            {
+              "field": "name",
+              "alias": "name",
+              "type": "String"
+            },
+            {
+              "field": "celltype",
+              "alias": "celltype",
+              "type": "String"
+            },
+            {
+              "field": "moltype",
+              "alias": "moltype",
+              "type": "String"
+            },
+            {
+              "field": "intrascore",
+              "alias": "intrascore",
+              "type": "DOUBLE"
+            }
+          ]
+        }
+      }
+    ],
+    "links": [
+      {
+        "label": "link",
+        "tableSource": {
+          "catalog": "diffCellSig",
+          "schema": "public",
+          "table": "links"
+        },
+        "fromNode": "node",
+        "toNode": "node",
+        "fromId": {
+          "fields": [
+            {
+              "type": "Int",
+              "field": "source",
+              "alias": "source"
+            }
+          ]
+        },
+        "toId": {
+          "fields": [
+            {
+              "type": "Int",
+              "field": "target",
+              "alias": "target"
+            }
+          ]
+        },
+        "id": {
+          "fields": [
+            {
+              "type": "Int",
+              "field": "id",
+              "alias": "id"
+            }
+          ]
+        },
+        "attributes": [
+          {
+            "field": "type",
+            "alias": "type",
+            "type": "String"
+          },
+          {
+            "field": "detailed_type",
+            "alias": "detailed_type",
+            "type": "String"
+          },
+          {
+            "field": "weight",
+            "alias": "weight",
+            "type": "DOUBLE"
+          },
+          {
+            "field": "significance",
+            "alias": "significance",
+            "type": "DOUBLE"
+          },
+          {
+            "field": "layer",
+            "alias": "layer",
+            "type": "Int"
+          }
+        ]
+      }
+    ]
+  }
+}

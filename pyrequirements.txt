@@ -1,0 +1,6 @@
+wheel
+pandas
+sqlalchemy
+psycopg
+decoupler
+omnipath

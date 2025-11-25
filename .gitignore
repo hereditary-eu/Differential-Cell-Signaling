@@ -1,0 +1,33 @@
+#containers log
+*.log
+*.pid
+
+#postrgesql + puppygraph
+pg-data/
+pgpass/
+servers.json/
+puppygraph-data-backup/
+puppygraph-data/
+
+
+# py venv
+cellSigPyVenv/
+
+#backend
+**/__pycache__/*
+**/*.pyc
+**/.vscode/
+backend/data/
+backend/schema-schema.json
+backend/working-schema.json
+backend/models.py
+
+#frontend has its own .gitignore
+
+**/data/
+**/tmp/
+.env
+.env.*
+**.err
+**.out
+
