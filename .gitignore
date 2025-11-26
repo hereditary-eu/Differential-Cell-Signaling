@@ -30,4 +30,4 @@ backend/models.py
 .env.*
 **.err
 **.out
-
+personalREADME.txt
