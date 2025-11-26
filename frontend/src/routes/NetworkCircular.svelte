@@ -1,4 +1,7 @@
 <script lang="ts">
+	// TODO: IMPLEMENT CONCENTRIC CIRCULAR LAYOUT
+	// ***********************************************************
+
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
 

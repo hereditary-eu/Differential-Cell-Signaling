@@ -11,6 +11,7 @@
 	let foundCelltypes: string[] = [];
 	let sender: string = '';
 	let receiver: string = '';
+	let reverseSig: boolean = false;
 	let filterIntrascore = false;
 	let filterInter = false;
 	let filterPv = true;
@@ -22,7 +23,7 @@
 
 	onMount(async () => {
 		try {
-			const res = await fetch(`${backend}/api/celltypes`);
+			const res = await fetch(`${backend}/api/static_info`);
 			const data = await res.json();
 			foundCelltypes = data.celltypes;
 		} catch (err) {
@@ -34,6 +35,7 @@
 		const query = new URLSearchParams({
 			sender: sender.toString(),
 			receiver: receiver.toString(),
+			reverse_sig: reverseSig.toString(),
 			filter_intrascore: filterIntrascore.toString(),
 			filter_pv: filterPv.toString(),
 			filter_inter: filterInter.toString(),
@@ -47,9 +49,11 @@
 	}
 </script>
 
-<div>
+<div style="margin-left: 3%;">
 	<!-- Sidebar for filters -->
+	<br />
 	<h2>Filters Setting</h2>
+	<br />
 	<!--  cell type(s) selection -->
 	<div>
 		<p class="block mb-1 font-semibold">Select cell types:</p>
@@ -83,7 +87,17 @@
 			</div>
 		</div>
 	</div>
+	<!-- Include also reverse signaling -->
+	<div class="flex items-center gap-2">
+		{#if sender === '' || receiver === ''}
+			<input id="reverse-sig" type="checkbox" bind:checked={reverseSig} disabled />
+		{:else}
+			<input id="reverse-sig" type="checkbox" bind:checked={reverseSig} />
+			<label for="reverse-sig">Include reverse signaling</label>
+		{/if}
+	</div>
 	<!-- Intrascore filter -->
+	<br />
 	<div class="flex items-center gap-2">
 		<input id="intra-filter" type="checkbox" bind:checked={filterIntrascore} />
 		<label for="intra-filter">Filter by intrascore</label>
@@ -142,17 +156,25 @@
 		</div>
 	{/if}
 	<!-- Apply button -->
+	<br />
 	{#if sender === '' || receiver === ''}
 		<button
 			id="apply-filters-btn"
 			type="button"
 			class="btn btn-dark disabled"
 			on:click={applyFilters}
+			style="float: center;"
 		>
 			Apply filters
 		</button>
 	{:else}
-		<button id="apply-filters-btn" type="button" class="btn btn-dark" on:click={applyFilters}>
+		<button
+			id="apply-filters-btn"
+			type="button"
+			class="btn btn-dark"
+			on:click={applyFilters}
+			style="float: center;"
+		>
 			Apply filters
 		</button>
 	{/if}

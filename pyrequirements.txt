@@ -1,6 +1,8 @@
 wheel
 pandas
 sqlalchemy
-psycopg
+fastapi
+uvicorn
+psycopg2
 decoupler
 omnipath

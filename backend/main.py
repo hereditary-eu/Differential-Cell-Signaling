@@ -28,16 +28,24 @@ def get_db_connection():
         port='5436'
     )
 
-@app.get('/api/celltypes')
+@app.get('/api/static_info')
 def get_celltypes():
     """Return distinct cell types from the nodes table."""
     conn = get_db_connection()
     cur = conn.cursor()
+    
     cur.execute('SELECT DISTINCT celltype FROM nodes ORDER BY celltype;')
     celltypes = [row[0] for row in cur.fetchall()]
+    
+    cur.execute('SELECT COUNT(*) FROM nodes;')
+    total_nodes = cur.fetchone()[0]
+
+    cur.execute('SELECT COUNT(*) FROM links;')
+    total_links = cur.fetchone()[0]
+    
     cur.close()
     conn.close()
-    return {'celltypes': celltypes}
+    return {'celltypes': celltypes, 'total_nodes': total_nodes, 'total_links': total_links}
 
 # @app.get('/api/filtered_data')
 # def get_filtered_network(
@@ -91,6 +99,7 @@ def get_celltypes():
 def get_filtered_network(
     sender: str = None,
     receiver: str = None,
+    reverse_sig: bool = False,
     filter_intrascore: bool = False,
     filter_pv: bool = False,
     filter_inter: bool = False,
@@ -125,27 +134,38 @@ def get_filtered_network(
     valid_node_ids = [n['id'] for n in nodes]
 
     #filter links based on celltype+type
-    link_query = """
-        SELECT l.* 
-        FROM links l
-        JOIN nodes ns ON ns.id = l.source
-        JOIN nodes nt ON nt.id = l.target
-        WHERE l.source = ANY(%s)
-            AND l.target = ANY(%s)
-            AND (
-                (l.type = 'TFL' AND ns.celltype = %s AND nt.celltype = %s)
-                OR
-                (l.type = 'LR' AND ns.celltype = %s AND nt.celltype = %s)
-                OR 
-                (l.type = 'RTF' AND ns.celltype = %s AND nt.celltype = %s)
-                )
-    """
-    link_params = [valid_node_ids, valid_node_ids, 
-                   sender, sender, #TFL layer
-                   sender, receiver, #LR layer
-                   receiver, receiver  #RTF layer
-                   ]
-
+    if reverse_sig:#in case to include both directions (sender->receiver and receiver->sender)
+        link_query = """
+            SELECT l.*
+            FROM links l
+            JOIN nodes ns ON ns.id = l.source
+            JOIN nodes nt ON nt.id = l.target
+            WHERE l.source = ANY(%s)
+                AND l.target = ANY(%s)
+        """
+        link_params =[valid_node_ids, valid_node_ids]
+    else: #normal case: only sender->receiver
+        link_query = """
+            SELECT l.* 
+            FROM links l
+            JOIN nodes ns ON ns.id = l.source
+            JOIN nodes nt ON nt.id = l.target
+            WHERE l.source = ANY(%s)
+                AND l.target = ANY(%s)
+                AND (
+                    (l.type = 'TFL' AND ns.celltype = %s AND nt.celltype = %s)
+                    OR
+                    (l.type = 'LR' AND ns.celltype = %s AND nt.celltype = %s)
+                    OR 
+                    (l.type = 'RTF' AND ns.celltype = %s AND nt.celltype = %s)
+                    )
+        """
+        link_params = [valid_node_ids, valid_node_ids, 
+                    sender, sender, #TFL layer
+                    sender, receiver, #LR layer
+                    receiver, receiver  #RTF layer
+                    ]
+    
     if filter_pv:
         link_query += " AND (l.significance < %s OR l.significance IS NULL)"
         link_params.append(pv_thresh)
