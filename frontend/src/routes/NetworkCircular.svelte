@@ -4,7 +4,7 @@
 
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
-
+	import { sender, receiver } from '$lib/stores';
 	export let networkData: { nodes: any[]; links: any[] };
 
 	let svgContainer: SVGSVGElement;
@@ -40,6 +40,9 @@
 	function renderNetwork() {
 		if (!networkData?.nodes?.length) return;
 
+		// debug
+		console.log('FROM NETWORK CIRCULAR COMPONENT: ', $sender, $receiver);
+
 		const nodes = networkData.nodes.map((d) => ({ ...d }));
 		const links = networkData.links.map((d) => ({ ...d }));
 
@@ -61,26 +64,35 @@
 
 			node.attr('opacity', (d: any) => (d.id === selectedId || neighbors.has(d.id) ? 1 : 0.1));
 			link.attr('opacity', (l: any) =>
-				l.source.id === selectedId || l.target.id === selectedId // || //add the following to highlight links starting from neighbor nodes
-					? // neighbors.has(l.source.id) ||
-						// neighbors.has(l.target.id)
-						1
-					: 0.1
+				l.source.id === selectedId || l.target.id === selectedId ? 1 : 0.1
+			);
+		}
+		// helper to identify nodes location
+		function isInnerCircle(d: any) {
+			return (
+				d.moltype === 'TF' && d.celltype === $sender && d.links?.some((l: any) => l.type === 'TFL')
+			);
+		}
+		function isSecondCircle(d: any) {
+			return (
+				d.moltype === 'ligand' &&
+				d.celltype === $sender &&
+				d.links?.some((l: any) => l.type === 'LR')
 			);
 		}
 
-		d3.select(svgContainer).selectAll('*').remove(); // Clear previous renderings
+		// Clear previous renderings
+		d3.select(svgContainer).selectAll('*').remove();
 
 		// Main SVG
 		const svg = d3
 			.select(svgContainer)
 			.attr('viewBox', [0, 0, width, height])
-			.style('background', '#fafafa')
+			.style('background', 'transparent')
 			.style('cursor', 'grab');
 
 		// WRAPPER that zoom/pan will transform
 		const zoomLayer = svg.append('g');
-
 		// Zoom behavior
 		svg.call(
 			d3
@@ -90,6 +102,23 @@
 					zoomLayer.attr('transform', event.transform);
 				})
 		);
+
+		var innerCircleRadius = 180;
+		var incrementRadius = 70;
+
+		var circle = zoomLayer
+			.selectAll('circle')
+			.data(d3.range(1, 6))
+			.enter()
+			.append('circle')
+			.attr('cx', width / 2)
+			.attr('cy', height / 2)
+			.attr('r', function (d) {
+				return innerCircleRadius + (d - 1) * incrementRadius;
+			})
+			.attr('fill', 'none')
+			.attr('stroke', '#ccc')
+			.attr('stroke-dasharray', '4 2');
 
 		// Build force layout
 		simulation = d3
@@ -102,7 +131,7 @@
 					.distance(15)
 					.strength(0.1)
 			)
-			.force('charge', d3.forceManyBody().strength(-10))
+			.force('charge', d3.forceManyBody().strength(-3))
 			.force('center', d3.forceCenter(width / 2, height / 2));
 
 		// Draw links
@@ -147,16 +176,29 @@
 
 		// Update positions during simulation
 		simulation.on('tick', () => {
-			// link
-			// 	.attr('x1', (d: any) => d.source.x)
-			// 	.attr('y1', (d: any) => d.source.y)
-			// 	.attr('x2', (d: any) => d.target.x)
-			// 	.attr('y2', (d: any) => d.target.y);
+			nodes.forEach((d) => {
+				const cx = width / 2;
+				const cy = height / 2;
+
+				// vector from center
+				const dx = d.x - cx;
+				const dy = d.y - cy;
+				const dist = Math.sqrt(dx * dx + dy * dy);
+
+				if (isInnerCircle(d)) {
+					console.log('inner circle');
+					if (dist !== innerCircleRadius) {
+						const k = innerCircleRadius / dist;
+						d.x = cx + dx * k;
+						d.y = cy + dy * k;
+					}
+				}
+			});
+
 			link.attr('d', (d: any) => {
 				const dx = d.target.x - d.source.x;
 				const dy = d.target.y - d.source.y;
-				const dr = Math.sqrt(dx * dx + dy * dy); // radius for arc
-				// const dr = Math.sqrt(dx * dx + dy * dy) * 1.5; // increase curvature by multiplying
+				const dr = Math.sqrt(dx * dx + dy * dy);
 				return `
 					M ${d.source.x},${d.source.y}
 					A ${dr},${dr} 0 0 1 ${d.target.x},${d.target.y}

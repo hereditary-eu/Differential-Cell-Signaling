@@ -7,7 +7,7 @@
 	let svgContainer: SVGSVGElement;
 	let simulation: d3.Simulation<any, undefined>;
 	let width = 500;
-	let height = 300;
+	let height = 200;
 
 	const colorScale = d3.scaleOrdinal(d3.schemeTableau10);
 
@@ -18,7 +18,7 @@
 			if (d.moltype === 'TF') {
 				g.append('circle').attr('r', 7).attr('fill', colorScale(d.celltype));
 			} else if (d.moltype === 'ligand') {
-				const size = 80;
+				const size = 90;
 				g.append('path')
 					.attr('d', d3.symbol().type(d3.symbolTriangle).size(size))
 					.attr('fill', colorScale(d.celltype));
@@ -72,7 +72,7 @@
 		const svg = d3
 			.select(svgContainer)
 			.attr('viewBox', [0, 0, width, height])
-			.style('background', '#fafafa')
+			.style('background', 'transparent')
 			.style('cursor', 'grab');
 
 		// WRAPPER that zoom/pan will transform
@@ -88,7 +88,7 @@
 				})
 		);
 
-		// Build force layout
+		// force layout
 		simulation = d3
 			.forceSimulation(nodes)
 			.force(
@@ -102,7 +102,7 @@
 			.force('charge', d3.forceManyBody().strength(-10))
 			.force('center', d3.forceCenter(width / 2, height / 2));
 
-		// Draw links
+		// draw links
 		const link = zoomLayer
 			.append('g')
 			.attr('stroke', '#999')
@@ -112,7 +112,7 @@
 			.data(links)
 			.join('path');
 
-		// Draw nodes
+		// draw nodes
 		const node = zoomLayer
 			.append('g')
 			.attr('stroke', '#fff')

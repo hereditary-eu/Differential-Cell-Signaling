@@ -1,16 +1,12 @@
 <script lang="ts">
 	import { onMount, createEventDispatcher } from 'svelte';
-
-	// export let onFilter: (payload: { url: string }) => void = () => {};
+	import { sender, receiver } from '$lib/stores';
 
 	const backend = import.meta.env.VITE_BACKEND_URL;
 	// Create an event dispatcher to emit the 'filter' event with the filter URL payload
 	const dispatch = createEventDispatcher<{ filter: { url: string } }>();
 
-	// State variables
 	let foundCelltypes: string[] = [];
-	let sender: string = '';
-	let receiver: string = '';
 	let reverseSig: boolean = false;
 	let filterIntrascore = false;
 	let filterInter = false;
@@ -26,15 +22,15 @@
 			const res = await fetch(`${backend}/api/static_info`);
 			const data = await res.json();
 			foundCelltypes = data.celltypes;
+			console.log('Fetched celltypes:', foundCelltypes);
 		} catch (err) {
 			console.error('Error fetching celltypes:', err);
 		}
 	});
 	function applyFilters() {
-		console.log(sender, receiver);
 		const query = new URLSearchParams({
-			sender: sender.toString(),
-			receiver: receiver.toString(),
+			sender: $sender,
+			receiver: $receiver,
 			reverse_sig: reverseSig.toString(),
 			filter_intrascore: filterIntrascore.toString(),
 			filter_pv: filterPv.toString(),
@@ -46,6 +42,14 @@
 		});
 		filtersApplied = true;
 		dispatch('filter', { url: `${backend}/api/filtered_data?${query.toString()}` });
+	}
+	function updateSender(event: Event) {
+		const target = event.target as HTMLSelectElement;
+		sender.set(target.value);
+	}
+	function updateReceiver(event: Event) {
+		const target = event.target as HTMLSelectElement;
+		receiver.set(target.value);
 	}
 </script>
 
@@ -62,9 +66,10 @@
 				<label for="sender-select">Sender:</label>
 				<select
 					id="sender-select"
-					bind:value={sender}
+					on:change={updateSender}
 					class="border rounded p-2"
 					style="width: 100%;"
+					value={$sender}
 				>
 					{#each foundCelltypes as ct}
 						<option value={ct}>{ct}</option>
@@ -76,9 +81,10 @@
 				<label for="receiver-select">Receiver:</label>
 				<select
 					id="receiver-select"
-					bind:value={receiver}
+					on:change={updateReceiver}
 					class="border rounded p-2"
 					style="width: 100%;"
+					value={$receiver}
 				>
 					{#each foundCelltypes as ct}
 						<option value={ct}>{ct}</option>
@@ -89,7 +95,7 @@
 	</div>
 	<!-- Include also reverse signaling -->
 	<div class="flex items-center gap-2">
-		{#if sender === '' || receiver === ''}
+		{#if $sender === '' || $receiver === ''}
 			<input id="reverse-sig" type="checkbox" bind:checked={reverseSig} disabled />
 		{:else}
 			<input id="reverse-sig" type="checkbox" bind:checked={reverseSig} />
@@ -157,7 +163,7 @@
 	{/if}
 	<!-- Apply button -->
 	<br />
-	{#if sender === '' || receiver === ''}
+	{#if $sender === '' || $receiver === ''}
 		<button
 			id="apply-filters-btn"
 			type="button"
@@ -180,6 +186,7 @@
 	{/if}
 
 	<br />
-	{#if filtersApplied}<span class="badge bg-success">Selected celltypes: {sender}, {receiver}</span
+	{#if filtersApplied}<span class="badge bg-success"
+			>Selected cell types: {$sender}, {$receiver}</span
 		>{/if}
 </div>

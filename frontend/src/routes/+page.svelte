@@ -3,6 +3,7 @@
 	import SidebarFilter from './SidebarFilter.svelte';
 	// import NetworkGraph from './NetworkGraph.svelte';
 	import NetworkGraphZoom from './NetworkGraphZoom.svelte';
+	import NetworkCircular from './NetworkCircular.svelte';
 
 	interface NetworkStats {
 		nNodes: number;
@@ -14,10 +15,9 @@
 		nTFLLinks: number;
 		nRTFLinks: number;
 	}
-	// let apiUrl = import.meta.env.VITE_BACKEND_URL + '/api/filtered_data';
+
 	let static_info = { celltypes: [], total_nodes: 0, total_links: 0 };
 	let networkData = { nodes: [], links: [], stats: {} as NetworkStats };
-	// let sidebarOpen = true;
 
 	onMount(async () => {
 		const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/static_info`);
@@ -95,8 +95,11 @@
 					</li>
 					<li class="nav-item" role="presentation">
 						<a class="nav-link" data-bs-toggle="tab" href="#network-circular" role="tab"
-							>Concentric Circular (Coming soon)</a
+							>Concentric Circular</a
 						>
+					</li>
+					<li class="nav-item" role="presentation">
+						<a class="nav-link" data-bs-toggle="tab" href="#network-linear" role="tab">Linear</a>
 					</li>
 					<li class="nav-item" role="presentation">
 						<a class="nav-link" data-bs-toggle="tab" href="#network-hive" role="tab">Hive</a>
@@ -113,10 +116,13 @@
 						<!-- </div> -->
 					</div>
 					<div class="tab-pane fade" id="network-circular" role="tabpanel">
-						<p style="margin: 1rem;">Concentric Circular layout coming soon...</p>
+						<NetworkCircular {networkData} />
 					</div>
 					<div class="tab-pane fade" id="network-hive" role="tabpanel">
 						<p style="margin: 1rem;">Hive layout coming soon...</p>
+					</div>
+					<div class="tab-pane fade" id="network-linear" role="tabpanel">
+						<p style="margin: 1rem;">Linear layout coming soon...</p>
 					</div>
 					<div class="tab-pane fade" id="network-tree" role="tabpanel">
 						<p style="margin: 1rem;">Tree layout coming soon...</p>
