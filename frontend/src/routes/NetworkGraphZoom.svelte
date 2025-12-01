@@ -3,13 +3,14 @@
 	import * as d3 from 'd3';
 
 	export let networkData: { nodes: any[]; links: any[] };
+	export let colorScale: d3.ScaleOrdinal<string, string, never>;
 
 	let svgContainer: SVGSVGElement;
 	let simulation: d3.Simulation<any, undefined>;
 	let width = 500;
 	let height = 200;
 
-	const colorScale = d3.scaleOrdinal(d3.schemeTableau10);
+	// const colorScale = d3.scaleOrdinal(d3.schemeTableau10);
 
 	function drawShape(selection: d3.Selection<any, any, any, any>) {
 		selection.each(function (d: any) {
@@ -108,6 +109,7 @@
 			.attr('stroke', '#999')
 			.attr('fill', 'none')
 			.attr('stroke-opacity', 0.6)
+			// .attr('marker-end', mapNumLinkAttrs) // 'url(#arrow)'
 			.selectAll('path')
 			.data(links)
 			.join('path');

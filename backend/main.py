@@ -34,7 +34,7 @@ def get_celltypes():
     conn = get_db_connection()
     cur = conn.cursor()
     
-    cur.execute('SELECT DISTINCT celltype FROM nodes ORDER BY celltype;')
+    cur.execute('SELECT DISTINCT celltype FROM nodes ORDER BY celltype DESC;')
     celltypes = [row[0] for row in cur.fetchall()]
     
     cur.execute('SELECT COUNT(*) FROM nodes;')

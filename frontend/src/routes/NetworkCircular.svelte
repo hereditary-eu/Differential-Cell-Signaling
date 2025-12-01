@@ -1,18 +1,19 @@
 <script lang="ts">
-	// TODO: IMPLEMENT CONCENTRIC CIRCULAR LAYOUT
-	// ***********************************************************
-
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
-	import { sender, receiver } from '$lib/stores';
+	import { sender, receiver, reverseSig } from '$lib/stores';
 	export let networkData: { nodes: any[]; links: any[] };
+	export let colorScale: d3.ScaleOrdinal<string, string, never>; // get the value from parent (+page.svelte)
+	// console.log('IN CIRCULAR, COLOR SCALE:', {
+	// 	colorScale: { domain: colorScale.domain(), range: colorScale.range() }
+	// });
 
 	let svgContainer: SVGSVGElement;
 	let simulation: d3.Simulation<any, undefined>;
 	let width = 500;
 	let height = 300;
 
-	const colorScale = d3.scaleOrdinal(d3.schemeTableau10);
+	// const colorScale = d3.scaleOrdinal(d3.schemeTableau10);
 
 	function drawShape(selection: d3.Selection<any, any, any, any>) {
 		selection.each(function (d: any) {
@@ -39,9 +40,6 @@
 
 	function renderNetwork() {
 		if (!networkData?.nodes?.length) return;
-
-		// debug
-		console.log('FROM NETWORK CIRCULAR COMPONENT: ', $sender, $receiver);
 
 		const nodes = networkData.nodes.map((d) => ({ ...d }));
 		const links = networkData.links.map((d) => ({ ...d }));
@@ -70,17 +68,26 @@
 		// helper to identify nodes location
 		function isInnerCircle(d: any) {
 			return (
-				d.moltype === 'TF' && d.celltype === $sender && d.links?.some((l: any) => l.type === 'TFL')
+				d.moltype === 'TF' && d.celltype === $sender
+				// need to fix by checking type of links associated to TF (to handle autocrine cases)
+				//&& d.links?.some((l: any) => l.type === 'TFL')
 			);
 		}
 		function isSecondCircle(d: any) {
-			return (
-				d.moltype === 'ligand' &&
-				d.celltype === $sender &&
-				d.links?.some((l: any) => l.type === 'LR')
-			);
+			return d.moltype === 'ligand' && d.celltype === $sender;
 		}
-
+		function isThirdCircle(d: any) {
+			return d.moltype === 'receptor' && d.celltype === $receiver;
+		}
+		function isFourthCircle(d: any) {
+			return d.moltype === 'TF' && d.celltype === $receiver;
+		}
+		function isFifthCircle(d: any) {
+			return d.moltype === 'ligand' && d.celltype === $receiver;
+		}
+		function isSixthCircle(d: any) {
+			return d.moltype === 'receptor' && d.celltype === $sender;
+		}
 		// Clear previous renderings
 		d3.select(svgContainer).selectAll('*').remove();
 
@@ -103,12 +110,13 @@
 				})
 		);
 
-		var innerCircleRadius = 180;
-		var incrementRadius = 70;
+		var innerCircleRadius = 100;
+		var incrementRadius = 85;
 
 		var circle = zoomLayer
 			.selectAll('circle')
-			.data(d3.range(1, 6))
+			// if not reverseSig, draw 4 circles
+			.data($reverseSig ? d3.range(1, 8) : d3.range(1, 5))
 			.enter()
 			.append('circle')
 			.attr('cx', width / 2)
@@ -131,7 +139,7 @@
 					.distance(15)
 					.strength(0.1)
 			)
-			.force('charge', d3.forceManyBody().strength(-3))
+			.force('charge', d3.forceManyBody().strength(-23))
 			.force('center', d3.forceCenter(width / 2, height / 2));
 
 		// Draw links
@@ -186,11 +194,55 @@
 				const dist = Math.sqrt(dx * dx + dy * dy);
 
 				if (isInnerCircle(d)) {
-					console.log('inner circle');
+					// console.log('inner circle');
 					if (dist !== innerCircleRadius) {
 						const k = innerCircleRadius / dist;
 						d.x = cx + dx * k;
 						d.y = cy + dy * k;
+					}
+				} else if (isSecondCircle(d)) {
+					// console.log('second circle');
+					const targetRadius = innerCircleRadius + incrementRadius;
+					if (dist !== targetRadius) {
+						const k = targetRadius / dist;
+						d.x = cx + dx * k;
+						d.y = cy + dy * k;
+					}
+				} else if (isThirdCircle(d)) {
+					// console.log('third circle');
+					const targetRadius = innerCircleRadius + 2 * incrementRadius;
+					if (dist !== targetRadius) {
+						const k = targetRadius / dist;
+						d.x = cx + dx * k;
+						d.y = cy + dy * k;
+					}
+				} else if (isFourthCircle(d)) {
+					// console.log('fourth circle');
+					const targetRadius = innerCircleRadius + 3 * incrementRadius;
+					if (dist !== targetRadius) {
+						const k = targetRadius / dist;
+						d.x = cx + dx * k;
+						d.y = cy + dy * k;
+					}
+					// other nodes can stay where they are
+				}
+				if (reverseSig) {
+					if (isFifthCircle(d)) {
+						// console.log('fifth circle');
+						const targetRadius = innerCircleRadius + 4 * incrementRadius;
+						if (dist !== targetRadius) {
+							const k = targetRadius / dist;
+							d.x = cx + dx * k;
+							d.y = cy + dy * k;
+						}
+					} else if (isSixthCircle(d)) {
+						// console.log('sixth circle');
+						const targetRadius = innerCircleRadius + 5 * incrementRadius;
+						if (dist !== targetRadius) {
+							const k = targetRadius / dist;
+							d.x = cx + dx * k;
+							d.y = cy + dy * k;
+						}
 					}
 				}
 			});

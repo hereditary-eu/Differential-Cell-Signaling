@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { onMount, createEventDispatcher } from 'svelte';
-	import { sender, receiver } from '$lib/stores';
+	import { sender, receiver, reverseSig, celltypes } from '$lib/stores';
 
 	const backend = import.meta.env.VITE_BACKEND_URL;
 	// Create an event dispatcher to emit the 'filter' event with the filter URL payload
 	const dispatch = createEventDispatcher<{ filter: { url: string } }>();
 
-	let foundCelltypes: string[] = [];
-	let reverseSig: boolean = false;
+	// let foundCelltypes: string[] = [];
+	// let reverseSig: boolean = false;
 	let filterIntrascore = false;
 	let filterInter = false;
 	let filterPv = true;
@@ -21,8 +21,9 @@
 		try {
 			const res = await fetch(`${backend}/api/static_info`);
 			const data = await res.json();
-			foundCelltypes = data.celltypes;
-			console.log('Fetched celltypes:', foundCelltypes);
+			// celltypes.update(data.celltypes);
+			celltypes.set(data.celltypes);
+			console.log('Fetched celltypes:', $celltypes);
 		} catch (err) {
 			console.error('Error fetching celltypes:', err);
 		}
@@ -31,7 +32,7 @@
 		const query = new URLSearchParams({
 			sender: $sender,
 			receiver: $receiver,
-			reverse_sig: reverseSig.toString(),
+			reverse_sig: $reverseSig.toString(),
 			filter_intrascore: filterIntrascore.toString(),
 			filter_pv: filterPv.toString(),
 			filter_inter: filterInter.toString(),
@@ -50,6 +51,10 @@
 	function updateReceiver(event: Event) {
 		const target = event.target as HTMLSelectElement;
 		receiver.set(target.value);
+	}
+	function updateReverseSig(event: Event) {
+		const target = event.target as HTMLInputElement;
+		reverseSig.set(target.checked);
 	}
 </script>
 
@@ -71,7 +76,7 @@
 					style="width: 100%;"
 					value={$sender}
 				>
-					{#each foundCelltypes as ct}
+					{#each $celltypes as ct}
 						<option value={ct}>{ct}</option>
 					{/each}
 				</select>
@@ -86,7 +91,7 @@
 					style="width: 100%;"
 					value={$receiver}
 				>
-					{#each foundCelltypes as ct}
+					{#each $celltypes as ct}
 						<option value={ct}>{ct}</option>
 					{/each}
 				</select>
@@ -96,9 +101,9 @@
 	<!-- Include also reverse signaling -->
 	<div class="flex items-center gap-2">
 		{#if $sender === '' || $receiver === ''}
-			<input id="reverse-sig" type="checkbox" bind:checked={reverseSig} disabled />
+			<input id="reverse-sig" type="checkbox" on:change={updateReverseSig} disabled />
 		{:else}
-			<input id="reverse-sig" type="checkbox" bind:checked={reverseSig} />
+			<input id="reverse-sig" type="checkbox" on:change={updateReverseSig} />
 			<label for="reverse-sig">Include reverse signaling</label>
 		{/if}
 	</div>
