@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import SidebarFilter from './SidebarFilter.svelte';
-	// import NetworkGraph from './NetworkGraph.svelte';
 	import NetworkGraphZoom from './NetworkGraphZoom.svelte';
 	import NetworkCircular from './NetworkCircular.svelte';
 	import { celltypes } from '$lib/stores';
@@ -24,7 +23,6 @@
 	celltypes.update(() => static_info.celltypes);
 
 	let colorScale = $derived(scaleOrdinal(schemeTableau10).domain($celltypes));
-	// console.log('COLOR SCALE', $colorScale.domain(), $colorScale.range());
 
 	onMount(async () => {
 		const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/static_info`);
@@ -34,7 +32,6 @@
 	async function loadData(url: string) {
 		const res = await fetch(url);
 		networkData = await res.json();
-		// console.log('Fetched data from:', url);
 	}
 </script>
 

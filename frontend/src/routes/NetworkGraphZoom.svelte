@@ -10,8 +10,6 @@
 	let width = 500;
 	let height = 200;
 
-	// const colorScale = d3.scaleOrdinal(d3.schemeTableau10);
-
 	function drawShape(selection: d3.Selection<any, any, any, any>) {
 		selection.each(function (d: any) {
 			const g = d3.select(this);

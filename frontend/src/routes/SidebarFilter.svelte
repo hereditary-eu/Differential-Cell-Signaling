@@ -1,13 +1,10 @@
 <script lang="ts">
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount } from 'svelte';
 	import { sender, receiver, reverseSig, celltypes } from '$lib/stores';
 
 	const backend = import.meta.env.VITE_BACKEND_URL;
-	// Create an event dispatcher to emit the 'filter' event with the filter URL payload
-	const dispatch = createEventDispatcher<{ filter: { url: string } }>();
+	let filter = { url: '' };
 
-	// let foundCelltypes: string[] = [];
-	// let reverseSig: boolean = false;
 	let filterIntrascore = false;
 	let filterInter = false;
 	let filterPv = true;
@@ -15,6 +12,7 @@
 	let minIntrascore = 0.5;
 	let maxIntrascore = 1.0;
 	let interDir: 'up' | 'down' = 'up';
+	let focusOnLR = false;
 	let filtersApplied = false;
 
 	onMount(async () => {
@@ -39,10 +37,11 @@
 			min_intrascore: minIntrascore.toString(),
 			max_intrascore: maxIntrascore.toString(),
 			pv_thresh: pvThresh.toString(),
-			inter_dir: interDir
+			inter_dir: interDir,
+			focus_on_LR: focusOnLR.toString()
 		});
 		filtersApplied = true;
-		dispatch('filter', { url: `${backend}/api/filtered_data?${query.toString()}` });
+		filter = { url: `${backend}/api/filtered_data?${query.toString()}` };
 	}
 	function updateSender(event: Event) {
 		const target = event.target as HTMLSelectElement;
@@ -71,7 +70,7 @@
 				<label for="sender-select">Sender:</label>
 				<select
 					id="sender-select"
-					on:change={updateSender}
+					onchange={() => updateSender}
 					class="border rounded p-2"
 					style="width: 100%;"
 					value={$sender}
@@ -86,7 +85,7 @@
 				<label for="receiver-select">Receiver:</label>
 				<select
 					id="receiver-select"
-					on:change={updateReceiver}
+					onchange={() => updateReceiver}
 					class="border rounded p-2"
 					style="width: 100%;"
 					value={$receiver}
@@ -101,9 +100,9 @@
 	<!-- Include also reverse signaling -->
 	<div class="flex items-center gap-2">
 		{#if $sender === '' || $receiver === ''}
-			<input id="reverse-sig" type="checkbox" on:change={updateReverseSig} disabled />
+			<input id="reverse-sig" type="checkbox" onchange={() => updateReverseSig} disabled />
 		{:else}
-			<input id="reverse-sig" type="checkbox" on:change={updateReverseSig} />
+			<input id="reverse-sig" type="checkbox" onchange={() => updateReverseSig} />
 			<label for="reverse-sig">Include reverse signaling</label>
 		{/if}
 	</div>
@@ -166,6 +165,13 @@
 			<label><input type="radio" value="down" bind:group={interDir} /> Down</label>
 		</div>
 	{/if}
+
+	<!-- Focus on LR filter -->
+	<div class="flex items-center gap-2">
+		<input id="focus-LR" type="checkbox" bind:checked={focusOnLR} />
+		<label for="focus-LR">Focus on LR interactions</label>
+	</div>
+
 	<!-- Apply button -->
 	<br />
 	{#if $sender === '' || $receiver === ''}
@@ -173,7 +179,7 @@
 			id="apply-filters-btn"
 			type="button"
 			class="btn btn-dark disabled"
-			on:click={applyFilters}
+			onclick={() => applyFilters}
 			style="float: center;"
 		>
 			Apply filters
@@ -183,7 +189,7 @@
 			id="apply-filters-btn"
 			type="button"
 			class="btn btn-dark"
-			on:click={applyFilters}
+			onclick={() => applyFilters}
 			style="float: center;"
 		>
 			Apply filters

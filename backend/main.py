@@ -106,6 +106,7 @@ def get_filtered_network(
     min_intrascore: float = 0.5,
     max_intrascore: float = 1.0,
     pv_thresh: float = 0.05,
+    focus_on_LR: bool = False,
     inter_dir: Literal['up', 'down'] = 'up'
 ):
     conn = get_db_connection()
@@ -185,6 +186,15 @@ def get_filtered_network(
         filtered_nodes = [n for n in nodes if n['id'] in connected_ids]
     else:
         filtered_nodes = []
+
+    # as last step, keep only LR nodes involved in diff CCC and their neighbors 
+    if focus_on_LR and filtered_nodes:
+        diff_lr_ids = [l['source'] for l in links if l['type'] == 'LR'] + [l['target'] for l in links if l['type'] == 'LR']
+        TF_neighbors = [l['source'] for l in links if l['type'] == 'TFL' and l['target'] in diff_lr_ids] + \
+                        [l['target'] for l in links if l['type'] == 'RTF' and l['source'] in diff_lr_ids]
+        focus_ids = set(diff_lr_ids + TF_neighbors)
+        filtered_nodes = [n for n in filtered_nodes if n['id'] in focus_ids]
+        links = [l for l in links if l['source'] in focus_ids and l['target'] in focus_ids]
 
     stats = {
         'nNodes': len(filtered_nodes),
