@@ -7,8 +7,8 @@
 
 	let svgContainer: SVGSVGElement;
 	let simulation: d3.Simulation<any, undefined>;
-	let width = 500;
-	let height = 300;
+	let width = 400;
+	let height = 250;
 
 	function drawShape(selection: d3.Selection<any, any, any, any>) {
 		selection.each(function (d: any) {
@@ -83,23 +83,22 @@
 		function isSixthCircle(d: any) {
 			return d.moltype === 'receptor' && d.celltype === $sender;
 		}
-		// Clear previous renderings
+
+		// clear previous renderings
 		d3.select(svgContainer).selectAll('*').remove();
 
-		// Main SVG
 		const svg = d3
 			.select(svgContainer)
 			.attr('viewBox', [0, 0, width, height])
 			.style('background', 'transparent')
 			.style('cursor', 'grab');
 
-		// WRAPPER that zoom/pan will transform
 		const zoomLayer = svg.append('g');
-		// Zoom behavior
+		// Zoom
 		svg.call(
 			d3
 				.zoom<SVGSVGElement, unknown>()
-				.scaleExtent([0.2, 7]) // min and max zoom
+				.scaleExtent([0.02, 8]) // min and max zoom
 				.on('zoom', (event) => {
 					zoomLayer.attr('transform', event.transform);
 				})
@@ -123,7 +122,6 @@
 			.attr('stroke', '#ccc')
 			.attr('stroke-dasharray', '4 2');
 
-		// Build force layout
 		simulation = d3
 			.forceSimulation(nodes)
 			.force(
@@ -137,7 +135,6 @@
 			.force('charge', d3.forceManyBody().strength(-23))
 			.force('center', d3.forceCenter(width / 2, height / 2));
 
-		// Draw links
 		const link = zoomLayer
 			.append('g')
 			.attr('stroke', '#999')
@@ -147,7 +144,6 @@
 			.data(links)
 			.join('path');
 
-		// Draw nodes
 		const node = zoomLayer
 			.append('g')
 			.attr('stroke', '#fff')
@@ -171,13 +167,14 @@
 		node.append('title').text((d: any) => `${d.name} (${d.celltype}) - ${d.moltype}`);
 		link.append('title').text((d: any) => {
 			if (d.type === 'LR') {
-				return `${d.type} (${d.source.name} → ${d.target.name}) weight: ${d.weight} significance: ${d.significance}`;
+				// .toFixed is for rounding decimal to third position
+				return `${d.type} (${d.source.name} → ${d.target.name}) weight: ${d.weight.toFixed(3)} significance: ${d.significance.toFixed(3)}`;
 			} else {
 				return `${d.type} (${d.source.name} → ${d.target.name})`;
 			}
 		});
 
-		// Update positions during simulation
+		//update positions during simulation
 		simulation.on('tick', () => {
 			nodes.forEach((d) => {
 				const cx = width / 2;
@@ -248,7 +245,7 @@
 		});
 	}
 
-	// Redraw when data changes
+	// redraw when data changes
 	$: if (networkData && networkData.nodes) {
 		renderNetwork();
 	}

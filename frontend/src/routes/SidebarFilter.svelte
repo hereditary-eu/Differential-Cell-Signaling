@@ -3,7 +3,8 @@
 	import { sender, receiver, reverseSig, celltypes } from '$lib/stores';
 
 	const backend = import.meta.env.VITE_BACKEND_URL;
-	let filter = { url: '' };
+
+	export let loadData: (url: string) => Promise<void>;
 
 	let filterIntrascore = false;
 	let filterInter = false;
@@ -14,12 +15,13 @@
 	let interDir: 'up' | 'down' = 'up';
 	let focusOnLR = false;
 	let filtersApplied = false;
+	let lastSender = '';
+	let lastReceiver = '';
 
 	onMount(async () => {
 		try {
 			const res = await fetch(`${backend}/api/static_info`);
 			const data = await res.json();
-			// celltypes.update(data.celltypes);
 			celltypes.set(data.celltypes);
 			console.log('Fetched celltypes:', $celltypes);
 		} catch (err) {
@@ -41,7 +43,11 @@
 			focus_on_LR: focusOnLR.toString()
 		});
 		filtersApplied = true;
-		filter = { url: `${backend}/api/filtered_data?${query.toString()}` };
+		lastSender = $sender;
+		lastReceiver = $receiver;
+		// const url = `${backend}/api/filtered_data?${query.toString()}`;
+
+		loadData(`${backend}/api/filtered_data?${query.toString()}`);
 	}
 	function updateSender(event: Event) {
 		const target = event.target as HTMLSelectElement;
@@ -59,21 +65,20 @@
 
 <div style="margin-left: 3%;">
 	<!-- Sidebar for filters -->
-	<br />
-	<h2>Filters Setting</h2>
-	<br />
+	<!-- <h4>Filters Setting</h4> -->
+
 	<!--  cell type(s) selection -->
 	<div>
 		<p class="block mb-1 font-semibold">Select cell types:</p>
 		<div class="d-flex">
-			<div style="width: 45%;">
+			<div style="width: 45%; margin-right: 3%;">
 				<label for="sender-select">Sender:</label>
 				<select
 					id="sender-select"
 					onchange={() => updateSender}
 					class="border rounded p-2"
 					style="width: 100%;"
-					value={$sender}
+					bind:value={$sender}
 				>
 					{#each $celltypes as ct}
 						<option value={ct}>{ct}</option>
@@ -88,7 +93,7 @@
 					onchange={() => updateReceiver}
 					class="border rounded p-2"
 					style="width: 100%;"
-					value={$receiver}
+					bind:value={$receiver}
 				>
 					{#each $celltypes as ct}
 						<option value={ct}>{ct}</option>
@@ -102,7 +107,12 @@
 		{#if $sender === '' || $receiver === ''}
 			<input id="reverse-sig" type="checkbox" onchange={() => updateReverseSig} disabled />
 		{:else}
-			<input id="reverse-sig" type="checkbox" onchange={() => updateReverseSig} />
+			<input
+				id="reverse-sig"
+				type="checkbox"
+				onchange={() => updateReverseSig}
+				bind:checked={$reverseSig}
+			/>
 			<label for="reverse-sig">Include reverse signaling</label>
 		{/if}
 	</div>
@@ -179,7 +189,7 @@
 			id="apply-filters-btn"
 			type="button"
 			class="btn btn-dark disabled"
-			onclick={() => applyFilters}
+			onclick={() => applyFilters()}
 			style="float: center;"
 		>
 			Apply filters
@@ -189,7 +199,7 @@
 			id="apply-filters-btn"
 			type="button"
 			class="btn btn-dark"
-			onclick={() => applyFilters}
+			onclick={() => applyFilters()}
 			style="float: center;"
 		>
 			Apply filters
@@ -198,6 +208,6 @@
 
 	<br />
 	{#if filtersApplied}<span class="badge bg-success"
-			>Selected cell types: {$sender}, {$receiver}</span
+			>Selected cell types: {lastSender}, {lastReceiver}</span
 		>{/if}
 </div>

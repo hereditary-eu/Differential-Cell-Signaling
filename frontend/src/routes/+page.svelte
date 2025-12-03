@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import SidebarFilter from './SidebarFilter.svelte';
+	import SidebarCaseStudies from './SidebarCaseStudies.svelte';
+	import SidebarQuery from './SidebarQuery.svelte';
 	import NetworkGraphZoom from './NetworkGraphZoom.svelte';
 	import NetworkCircular from './NetworkCircular.svelte';
 	import { celltypes } from '$lib/stores';
@@ -27,6 +29,7 @@
 	onMount(async () => {
 		const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/static_info`);
 		static_info = await res.json();
+		celltypes.set(static_info.celltypes);
 	});
 
 	async function loadData(url: string) {
@@ -38,7 +41,81 @@
 <div class="app">
 	<div class="d-flex">
 		<aside class="bg-light border-end" style="width: 25%;">
-			<SidebarFilter on:filter={(e) => loadData(e.detail.url)} />
+			<div class="accordion" id="leftSidebarAccordion">
+				<div class="accordion-item">
+					<h2 class="accordion-header" id="CaseStudies">
+						<button
+							class="accordion-button collapsed"
+							type="button"
+							data-bs-toggle="collapse"
+							data-bs-target="#collapseCaseStudies"
+							aria-expanded="false"
+							aria-controls="collapseCaseStudies"
+						>
+							Case Studies
+						</button>
+					</h2>
+					<div
+						id="collapseCaseStudies"
+						class="accordion-collapse collapse"
+						aria-labelledby="CaseStudies"
+						data-bs-parent="#leftSidebarAccordion"
+					>
+						<div class="accordion-body">
+							<SidebarCaseStudies />
+						</div>
+					</div>
+				</div>
+				<div class="accordion-item">
+					<h2 class="accordion-header" id="Filters">
+						<button
+							class="accordion-button"
+							type="button"
+							data-bs-toggle="collapse"
+							data-bs-target="#collapseFilters"
+							aria-expanded="true"
+							aria-controls="collapseFilters"
+						>
+							Filters Settings
+						</button>
+					</h2>
+					<div
+						id="collapseFilters"
+						class="accordion-collapse collapse show"
+						aria-labelledby="Filters"
+						data-bs-parent="#leftSidebarAccordion"
+						style=""
+					>
+						<div class="accordion-body">
+							<SidebarFilter {loadData} />
+						</div>
+					</div>
+				</div>
+				<div class="accordion-item">
+					<h2 class="accordion-header" id="Query">
+						<button
+							class="accordion-button collapsed"
+							type="button"
+							data-bs-toggle="collapse"
+							data-bs-target="#collapseQuery"
+							aria-expanded="false"
+							aria-controls="collapseQuery"
+						>
+							Customizable Query
+						</button>
+					</h2>
+					<div
+						id="collapseQuery"
+						class="accordion-collapse collapse"
+						aria-labelledby="Query"
+						data-bs-parent="#leftSidebarAccordion"
+					>
+						<div class="accordion-body">
+							<SidebarQuery />
+						</div>
+					</div>
+				</div>
+			</div>
 		</aside>
 		<main class="flex-grow-1 p-4" id="graph-area">
 			<div
@@ -90,7 +167,7 @@
 				</div>
 			{/if}
 
-			<div class="card border-primary mb-3">
+			<div class="card border-primary mb-3" style="width: 80%;">
 				<ul class="nav nav-tabs" role="tablist">
 					<li class="nav-item" role="presentation">
 						<a class="nav-link active" data-bs-toggle="tab" href="#network-zoom" role="tab"

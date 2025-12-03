@@ -7,8 +7,8 @@
 
 	let svgContainer: SVGSVGElement;
 	let simulation: d3.Simulation<any, undefined>;
-	let width = 500;
-	let height = 200;
+	let width = 400;
+	let height = 250;
 
 	function drawShape(selection: d3.Selection<any, any, any, any>) {
 		selection.each(function (d: any) {
@@ -81,7 +81,7 @@
 		svg.call(
 			d3
 				.zoom<SVGSVGElement, unknown>()
-				.scaleExtent([0.2, 7]) // min and max zoom
+				.scaleExtent([0.02, 8]) // min and max zoom
 				.on('zoom', (event) => {
 					zoomLayer.attr('transform', event.transform);
 				})
