@@ -1,37 +1,13 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
-	import { sender, receiver, reverseSig } from '$lib/stores';
+	import { sender, receiver, reverseSig, colorScale } from '$lib/stores';
+	import { zoomBehavior, width, height, drawShape, highlightNode, drawLegend } from './utils';
+
 	export let networkData: { nodes: any[]; links: any[] };
-	export let colorScale: d3.ScaleOrdinal<string, string, never>; // get the value from parent (+page.svelte)
 
 	let svgContainer: SVGSVGElement;
 	let simulation: d3.Simulation<any, undefined>;
-	let width = 400;
-	let height = 250;
-
-	function drawShape(selection: d3.Selection<any, any, any, any>) {
-		selection.each(function (d: any) {
-			const g = d3.select(this);
-
-			if (d.moltype === 'TF') {
-				g.append('circle').attr('r', 7).attr('fill', colorScale(d.celltype));
-			} else if (d.moltype === 'ligand') {
-				const size = 80;
-				g.append('path')
-					.attr('d', d3.symbol().type(d3.symbolTriangle).size(size))
-					.attr('fill', colorScale(d.celltype));
-			} else if (d.moltype === 'receptor') {
-				const side = 12;
-				g.append('rect')
-					.attr('x', -side / 2)
-					.attr('y', -side / 2)
-					.attr('width', side)
-					.attr('height', side)
-					.attr('fill', colorScale(d.celltype));
-			}
-		});
-	}
 
 	function renderNetwork() {
 		if (!networkData?.nodes?.length) return;
@@ -39,27 +15,6 @@
 		const nodes = networkData.nodes.map((d) => ({ ...d }));
 		const links = networkData.links.map((d) => ({ ...d }));
 
-		// build adjacency for highlight neibors
-		const adjacency: Record<string, Set<string>> = {};
-		links.forEach((l: any) => {
-			const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
-			const targetId = typeof l.target === 'object' ? l.target.id : l.target;
-			adjacency[sourceId] = adjacency[sourceId] || new Set<string>();
-			adjacency[targetId] = adjacency[targetId] || new Set<string>();
-			adjacency[sourceId].add(targetId);
-			adjacency[targetId].add(sourceId);
-		});
-		function getNeighbors(id: string) {
-			return adjacency[id] || new Set<string>();
-		}
-		function highlightNode(selectedId: string) {
-			const neighbors = getNeighbors(selectedId);
-
-			node.attr('opacity', (d: any) => (d.id === selectedId || neighbors.has(d.id) ? 1 : 0.1));
-			link.attr('opacity', (l: any) =>
-				l.source.id === selectedId || l.target.id === selectedId ? 1 : 0.1
-			);
-		}
 		// helper to identify nodes location
 		function isInnerCircle(d: any) {
 			return (
@@ -94,16 +49,13 @@
 			.style('cursor', 'grab');
 
 		const zoomLayer = svg.append('g');
-		// Zoom
-		svg.call(
-			d3
-				.zoom<SVGSVGElement, unknown>()
-				.scaleExtent([0.02, 8]) // min and max zoom
-				.on('zoom', (event) => {
-					zoomLayer.attr('transform', event.transform);
-				})
-		);
+		const { zoom, initialTransform } = zoomBehavior(zoomLayer);
+		// attach zoom to svg
+		svg.call(zoom as any);
+		// apply initial position
+		svg.call(zoom.transform as any, initialTransform);
 
+		// draw circles
 		var innerCircleRadius = 100;
 		var incrementRadius = 85;
 
@@ -152,8 +104,10 @@
 			.data(nodes)
 			.join('g')
 			.join('g')
-			.call(drawShape) // map shape to moltype
-			.on('click', (event: any, d: { id: string }) => highlightNode(d.id));
+			.call((selection) => drawShape(selection, $colorScale)) // map shape to moltype
+			.on('click', (event: any, d: { id: string }) => highlightNode(d.id, links, node, link));
+
+		drawLegend(svgContainer, $colorScale);
 
 		//reset when clicking on empty space
 		svg.on('click', (event) => {

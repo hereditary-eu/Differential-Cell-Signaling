@@ -6,7 +6,6 @@
 	import NetworkGraphZoom from './NetworkGraphZoom.svelte';
 	import NetworkCircular from './NetworkCircular.svelte';
 	import { celltypes } from '$lib/stores';
-	import { scaleOrdinal, schemeTableau10 } from 'd3';
 
 	interface NetworkStats {
 		nNodes: number;
@@ -21,10 +20,6 @@
 
 	let static_info = $state({ celltypes: [], total_nodes: 0, total_links: 0 });
 	let networkData = $state({ nodes: [], links: [], stats: {} as NetworkStats });
-
-	celltypes.update(() => static_info.celltypes);
-
-	let colorScale = $derived(scaleOrdinal(schemeTableau10).domain($celltypes));
 
 	onMount(async () => {
 		const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/static_info`);
@@ -191,13 +186,10 @@
 				</ul>
 				<div id="tabContainer" class="tab-content">
 					<div class="tab-pane fade show active" id="network-zoom" role="tabpanel">
-						<!-- <div style="width: 1000px; height: 300px;"> -->
-						<!-- regulate div dims from here -->
-						<NetworkGraphZoom {networkData} {colorScale} />
-						<!-- </div> -->
+						<NetworkGraphZoom {networkData} />
 					</div>
 					<div class="tab-pane fade" id="network-circular" role="tabpanel">
-						<NetworkCircular {networkData} {colorScale} />
+						<NetworkCircular {networkData} />
 					</div>
 					<div class="tab-pane fade" id="network-hive" role="tabpanel">
 						<p style="margin: 1rem;">Hive layout coming soon...</p>

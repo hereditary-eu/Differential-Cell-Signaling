@@ -1,37 +1,12 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
+	import { zoomBehavior, width, height, drawShape, drawLegend, highlightNode } from './utils';
+	import { colorScale } from '$lib/stores';
 
 	export let networkData: { nodes: any[]; links: any[] };
-	export let colorScale: d3.ScaleOrdinal<string, string, never>;
-
 	let svgContainer: SVGSVGElement;
 	let simulation: d3.Simulation<any, undefined>;
-	let width = 400;
-	let height = 250;
-
-	function drawShape(selection: d3.Selection<any, any, any, any>) {
-		selection.each(function (d: any) {
-			const g = d3.select(this);
-
-			if (d.moltype === 'TF') {
-				g.append('circle').attr('r', 7).attr('fill', colorScale(d.celltype));
-			} else if (d.moltype === 'ligand') {
-				const size = 90;
-				g.append('path')
-					.attr('d', d3.symbol().type(d3.symbolTriangle).size(size))
-					.attr('fill', colorScale(d.celltype));
-			} else if (d.moltype === 'receptor') {
-				const side = 12;
-				g.append('rect')
-					.attr('x', -side / 2)
-					.attr('y', -side / 2)
-					.attr('width', side)
-					.attr('height', side)
-					.attr('fill', colorScale(d.celltype));
-			}
-		});
-	}
 
 	function renderNetwork() {
 		if (!networkData?.nodes?.length) return;
@@ -39,53 +14,18 @@
 		const nodes = networkData.nodes.map((d) => ({ ...d }));
 		const links = networkData.links.map((d) => ({ ...d }));
 
-		// build adjacency for highlight neibors
-		const adjacency: Record<string, Set<string>> = {};
-		links.forEach((l: any) => {
-			const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
-			const targetId = typeof l.target === 'object' ? l.target.id : l.target;
-			adjacency[sourceId] = adjacency[sourceId] || new Set<string>();
-			adjacency[targetId] = adjacency[targetId] || new Set<string>();
-			adjacency[sourceId].add(targetId);
-			adjacency[targetId].add(sourceId);
-		});
-		function getNeighbors(id: string) {
-			return adjacency[id] || new Set<string>();
-		}
-		function highlightNode(selectedId: string) {
-			const neighbors = getNeighbors(selectedId);
+		d3.select(svgContainer).selectAll('*').remove(); // clear previous renderings
 
-			node.attr('opacity', (d: any) => (d.id === selectedId || neighbors.has(d.id) ? 1 : 0.1));
-			link.attr('opacity', (l: any) =>
-				l.source.id === selectedId || l.target.id === selectedId // || //add the following to highlight links starting from neighbor nodes
-					? // neighbors.has(l.source.id) ||
-						// neighbors.has(l.target.id)
-						1
-					: 0.1
-			);
-		}
-
-		d3.select(svgContainer).selectAll('*').remove(); // Clear previous renderings
-
-		// Main SVG
 		const svg = d3
 			.select(svgContainer)
 			.attr('viewBox', [0, 0, width, height])
 			.style('background', 'transparent')
 			.style('cursor', 'grab');
 
-		// WRAPPER that zoom/pan will transform
 		const zoomLayer = svg.append('g');
-
-		// Zoom behavior
-		svg.call(
-			d3
-				.zoom<SVGSVGElement, unknown>()
-				.scaleExtent([0.02, 8]) // min and max zoom
-				.on('zoom', (event) => {
-					zoomLayer.attr('transform', event.transform);
-				})
-		);
+		const { zoom, initialTransform } = zoomBehavior(zoomLayer);
+		svg.call(zoom as any);
+		svg.call(zoom.transform as any, initialTransform);
 
 		// force layout
 		simulation = d3
@@ -121,8 +61,10 @@
 			.data(nodes)
 			.join('g')
 			.join('g')
-			.call(drawShape) // map shape to moltype
-			.on('click', (event: any, d: { id: string }) => highlightNode(d.id));
+			.call((selection) => drawShape(selection, $colorScale)) // map shape to moltype
+			.on('click', (event: any, d: { id: string }) => highlightNode(d.id, links, node, link));
+
+		drawLegend(svgContainer, $colorScale);
 
 		//reset when clicking on empty space
 		svg.on('click', (event) => {
@@ -142,13 +84,8 @@
 			}
 		});
 
-		// Update positions during simulation
+		//update positions during simulation
 		simulation.on('tick', () => {
-			// link
-			// 	.attr('x1', (d: any) => d.source.x)
-			// 	.attr('y1', (d: any) => d.source.y)
-			// 	.attr('x2', (d: any) => d.target.x)
-			// 	.attr('y2', (d: any) => d.target.y);
 			link.attr('d', (d: any) => {
 				const dx = d.target.x - d.source.x;
 				const dy = d.target.y - d.source.y;
