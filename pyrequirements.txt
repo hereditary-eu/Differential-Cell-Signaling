@@ -1,8 +1,0 @@
-wheel
-pandas
-sqlalchemy
-fastapi
-uvicorn
-psycopg2
-decoupler
-omnipath
