@@ -7,6 +7,7 @@ export const height = 250;
 const initialScale = 0.3;
 const initialX = width / 3;
 const initialY = height / 3;
+
 export interface ZoomOptions {
     scaleExtent?: [number, number];
     wheelSensitivity?: number;
@@ -34,7 +35,8 @@ export function zoomBehavior(
 
 
 // export function to map moltype to shape
-export function drawShape(selection: d3.Selection<any, any, any, any>,
+export function drawShape(
+    selection: d3.Selection<any, any, any, any>,
     colorScale: (value: string) => string
 ) {
 		selection.each(function (d: any) {
@@ -57,7 +59,48 @@ export function drawShape(selection: d3.Selection<any, any, any, any>,
 					.attr('fill', colorScale(d.celltype));
 			}
 		});
+        // return selection;
+        // without this, returns void! eventually add return selection for chaining
 	}
+
+
+// interpolateViridis wants values between 0 and 1 -> do minmax scale
+// TODO in the future, now assuming scSeqComm output: [-1,1]
+export function aesEdge(
+    selection: d3.Selection<any, any, any, any>
+) {
+
+        selection.each(function (d: any) {
+            const g = d3.select(this);
+            g.attr('stroke', '#999'); // default color for other edges
+            
+            if (d.type === 'LR') {
+                // VIRIDIS OPTION
+                // const norm_weight = (d.weight + 1) / 2; // assuming [-1,1]
+                // g.attr('stroke', d3.interpolateViridis(norm_weight));
+                if (d.weight < 0) {
+                    g.attr('stroke', '#1E90FF'); // blue for under-activation
+                } else {
+                    g.attr('stroke', '#720000'); //'#8B0000'); // darkred for over-activation
+                }
+                g.attr('stroke-opacity', 0.8);
+                
+            } else if (d.type === 'TFL') {
+                if (d.weight < 0) {
+                    // blunt end
+                    g.attr('marker-end', 'url(#Tblunt)'); // not working
+                    // g.attr('stroke', '#000000'); //DEBUG
+                    // console.log('blunt end for TFL with weight <0')
+                } else {
+                    // arrow end
+                    // g.attr('stroke', '#FFA500'); //DEBUG
+                    g.attr('marker-end', 'url(#arrow)'); // not working
+                    // console.log('arrow end for TFL with weight >=0')
+                    
+                }
+            }
+        });
+}
 
 
 // export function to be called when a node is clicked
@@ -82,8 +125,8 @@ export function highlightNode(selectedId: string, links: any, node: d3.Selection
         );
     }
 
-
 // export function to draw legend of moltype and celltype
+// to do: make same size triangle and square.. more similar to parameters used for plotting
 export function drawLegend(
     svg: SVGSVGElement,
     colorScale: d3.ScaleOrdinal<string, any, undefined>,

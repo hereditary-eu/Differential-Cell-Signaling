@@ -20,11 +20,21 @@
 
 	let static_info = $state({ celltypes: [], total_nodes: 0, total_links: 0 });
 	let networkData = $state({ nodes: [], links: [], stats: {} as NetworkStats });
+	let molecules = $state([]);
+
+	// let filtersApplied = $state(false);
+	// let handleFiltersApplied = () => {
+	// 	filtersApplied = true;
+	// };
 
 	onMount(async () => {
 		const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/static_info`);
 		static_info = await res.json();
 		celltypes.set(static_info.celltypes);
+		const moleculesRes = await fetch(
+			`${import.meta.env.VITE_BACKEND_URL}/api/molecules_names_list`
+		);
+		molecules = await moleculesRes.json();
 	});
 
 	async function loadData(url: string) {
@@ -182,6 +192,23 @@
 					</li>
 					<li class="nav-item" role="presentation">
 						<a class="nav-link" data-bs-toggle="tab" href="#network-tree" role="tab">Tree</a>
+					</li>
+					<li class="nav-item dropdown">
+						<a
+							class="nav-link dropdown-toggle show"
+							data-bs-toggle="dropdown"
+							href="#drop"
+							role="button"
+							aria-haspopup="true"
+							aria-expanded="true">...</a
+						>
+						<div class="dropdown-menu show" data-bs-popper="static">
+							<a class="dropdown-item" href="#drop">LR viridis</a>
+							<a class="dropdown-item" href="#drop">LR volcano</a>
+							<div class="dropdown-divider"></div>
+							<a class="dropdown-item" href="#drop">TFL action</a>
+							<!-- <a class="dropdown-item" href="#drop">Separated link</a> -->
+						</div>
 					</li>
 				</ul>
 				<div id="tabContainer" class="tab-content">

@@ -47,54 +47,6 @@ def get_celltypes():
     conn.close()
     return {'celltypes': celltypes, 'total_nodes': total_nodes, 'total_links': total_links}
 
-# @app.get('/api/filtered_data')
-# def get_filtered_network(
-#     sender: str = None,
-#     receiver: str = None,
-#     filter_intrascore: bool = False,
-#     filter_pv: bool = False,
-#     filter_inter: bool = False,
-#     min_intrascore: float = 0.0,
-#     max_intrascore: float = 1.0,
-#     pv_thresh: float = 0.05,
-#     inter_dir: Literal['up', 'down'] = 'up'
-# ):
-#     conn = get_db_connection()
-#     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-#     query_nodes = "SELECT * FROM nodes WHERE (celltype = %s OR celltype = %s) "
-#     params = [sender, receiver]
-
-#     if filter_intrascore:
-#         query_nodes += "AND ( (intrascore BETWEEN %s AND %s) OR intrascore IS NULL ) "
-#         params.extend([min_intrascore, max_intrascore])
-#     query_nodes += ";"
-
-#     cur.execute(query_nodes, params)
-#     nodes = cur.fetchall()
-#     valid_ids = [n['id'] for n in nodes]
-
-#     query_links = "SELECT * FROM links WHERE 1=1 "
-#     params = []
-#     if valid_ids:
-#         query_links += "AND (source = ANY(%s) AND target = ANY(%s)) "
-#         params.extend([valid_ids, valid_ids])
-#     if filter_pv:
-#         query_links += "AND ( (significance < %s) OR significance IS NULL ) "
-#         params.append(pv_thresh)
-#     if filter_inter:
-#         if inter_dir == 'up':
-#             query_links += 'AND ( (weight > 0) OR weight IS NULL ) '
-#         else:
-#             query_links += 'AND ( (weight < 0) OR weight IS NULL ) '
-#     query_links += ';'
-#     cur.execute(query_links, params)
-#     links = cur.fetchall()
-
-#     cur.close()
-#     conn.close()
-#     return {'nodes': nodes, 'links': links}
-
 @app.get('/api/filtered_data')
 def get_filtered_network(
     sender: str = None,
@@ -235,6 +187,69 @@ def get_filtered_network(
         'links': links,
         'stats': stats
     }
+
+@app.get('/api/molecules_names_list')
+def get_molecules_names_list():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT DISTINCT name FROM nodes ORDER BY name ASC;')
+    names = [row[0] for row in cur.fetchall()]
+    cur.close()
+    conn.close()
+    #save this just temporarily to a file for Stefan
+    # with open("molecules.txt", "w") as outfile:
+    #     outfile.write("\n".join(names))
+    # TO BE REMOVED
+    return {'molecules': names}
+
+
+# @app.get('/api/filtered_data')
+# def get_filtered_network(
+#     sender: str = None,
+#     receiver: str = None,
+#     filter_intrascore: bool = False,
+#     filter_pv: bool = False,
+#     filter_inter: bool = False,
+#     min_intrascore: float = 0.0,
+#     max_intrascore: float = 1.0,
+#     pv_thresh: float = 0.05,
+#     inter_dir: Literal['up', 'down'] = 'up'
+# ):
+#     conn = get_db_connection()
+#     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+#     query_nodes = "SELECT * FROM nodes WHERE (celltype = %s OR celltype = %s) "
+#     params = [sender, receiver]
+
+#     if filter_intrascore:
+#         query_nodes += "AND ( (intrascore BETWEEN %s AND %s) OR intrascore IS NULL ) "
+#         params.extend([min_intrascore, max_intrascore])
+#     query_nodes += ";"
+
+#     cur.execute(query_nodes, params)
+#     nodes = cur.fetchall()
+#     valid_ids = [n['id'] for n in nodes]
+
+#     query_links = "SELECT * FROM links WHERE 1=1 "
+#     params = []
+#     if valid_ids:
+#         query_links += "AND (source = ANY(%s) AND target = ANY(%s)) "
+#         params.extend([valid_ids, valid_ids])
+#     if filter_pv:
+#         query_links += "AND ( (significance < %s) OR significance IS NULL ) "
+#         params.append(pv_thresh)
+#     if filter_inter:
+#         if inter_dir == 'up':
+#             query_links += 'AND ( (weight > 0) OR weight IS NULL ) '
+#         else:
+#             query_links += 'AND ( (weight < 0) OR weight IS NULL ) '
+#     query_links += ';'
+#     cur.execute(query_links, params)
+#     links = cur.fetchall()
+
+#     cur.close()
+#     conn.close()
+#     return {'nodes': nodes, 'links': links}
 
 
 # @app.get('/api/stats')

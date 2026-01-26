@@ -1,10 +1,19 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { sender, receiver, reverseSig, celltypes } from '$lib/stores';
+	import { sender, receiver, reverseSig, celltypes, filtersApplied } from '$lib/stores';
 
 	const backend = import.meta.env.VITE_BACKEND_URL;
 
 	export let loadData: (url: string) => Promise<void>;
+	// export let filtersApplied: boolean;
+	// let filtersApplied = $props().filtersApplied;
+	// const {
+	// 	onFiltersApplied,
+	// 	loadData
+	// }: {
+	// 	onFiltersApplied?: () => void;
+	// 	loadData: (url: string) => Promise<void>;
+	// } = $props();
 
 	let filterIntrascore = false;
 	let filterInter = false;
@@ -14,7 +23,7 @@
 	let maxIntrascore = 1.0;
 	let interDir: 'up' | 'down' = 'up';
 	let focusOnLR = false;
-	let filtersApplied = false;
+	// let filtersApplied = false;
 	let lastSender = '';
 	let lastReceiver = '';
 
@@ -42,11 +51,13 @@
 			inter_dir: interDir,
 			focus_on_LR: focusOnLR.toString()
 		});
-		filtersApplied = true;
+		// filtersApplied = true;
 		lastSender = $sender;
 		lastReceiver = $receiver;
-		// const url = `${backend}/api/filtered_data?${query.toString()}`;
 
+		// onFiltersApplied?.(); // send to parent component update
+		filtersApplied.set(true);
+		// const url = `${backend}/api/filtered_data?${query.toString()}`;
 		loadData(`${backend}/api/filtered_data?${query.toString()}`);
 	}
 	function updateSender(event: Event) {

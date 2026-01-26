@@ -1,10 +1,18 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
-	import { sender, receiver, reverseSig, colorScale } from '$lib/stores';
+	import { sender, receiver, reverseSig, colorScale, filtersApplied } from '$lib/stores';
 	import { zoomBehavior, width, height, drawShape, highlightNode, drawLegend } from './utils';
 
-	export let networkData: { nodes: any[]; links: any[] };
+	// export let networkData: { nodes: any[]; links: any[] };
+	// export let filtersApplied: boolean;
+	const {
+		networkData = { nodes: [], links: [] }
+	}: {
+		networkData: { nodes: any[]; links: any[] };
+	} = $props();
+
+	// console.log('NetworkCircular - filtersApplied:', filtersApplied);
 
 	let svgContainer: SVGSVGElement;
 	let simulation: d3.Simulation<any, undefined>;
@@ -42,6 +50,7 @@
 		// clear previous renderings
 		d3.select(svgContainer).selectAll('*').remove();
 
+		// create the svg DOM element
 		const svg = d3
 			.select(svgContainer)
 			.attr('viewBox', [0, 0, width, height])
@@ -57,7 +66,7 @@
 
 		// draw circles
 		var innerCircleRadius = 100;
-		var incrementRadius = 85;
+		var incrementRadius = 95;
 
 		var circle = zoomLayer
 			.selectAll('circle')
@@ -71,7 +80,8 @@
 				return innerCircleRadius + (d - 1) * incrementRadius;
 			})
 			.attr('fill', 'none')
-			.attr('stroke', '#ccc')
+			// .attr('stroke', '#ccc')
+			.attr('stroke', '#ababab')
 			.attr('stroke-dasharray', '4 2');
 
 		simulation = d3
@@ -200,9 +210,14 @@
 	}
 
 	// redraw when data changes
-	$: if (networkData && networkData.nodes) {
-		renderNetwork();
-	}
+
+	// $: if (networkData) {
+	// && networkData.nodes) {
+	$effect(() => {
+		if (filtersApplied) {
+			renderNetwork();
+		}
+	});
 
 	onMount(() => {
 		renderNetwork();
