@@ -11,3 +11,4 @@ export const colorScale = derived(celltypes, ($celltypes) => {
         .range(schemeTableau10)
         .unknown(undefined);
 });
+export const filtersApplied = writable(false);

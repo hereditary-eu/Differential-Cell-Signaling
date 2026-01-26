@@ -31,3 +31,12 @@ backend/models.py
 **.err
 **.out
 personalREADME.txt
+
+
+# cluttering files
+backend/molecules.txt 
+#file for stefan
+frontend/src/routes/HeatmapBarplot.svelte 
+#still rudimental attempt
+hellooo.sql 
+#tmp backup for Peter

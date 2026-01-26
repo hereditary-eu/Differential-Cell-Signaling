@@ -1,7 +1,15 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
-	import { zoomBehavior, width, height, drawShape, drawLegend, highlightNode } from './utils';
+	import {
+		zoomBehavior,
+		width,
+		height,
+		drawShape,
+		drawLegend,
+		highlightNode,
+		aesEdge
+	} from './utils';
 	import { colorScale } from '$lib/stores';
 
 	export let networkData: { nodes: any[]; links: any[] };
@@ -41,27 +49,64 @@
 			.force('charge', d3.forceManyBody().strength(-10))
 			.force('center', d3.forceCenter(width / 2, height / 2));
 
+		// from basic example
+		// build the arrow.
+		svg
+			.append('svg:defs')
+			.selectAll('marker')
+			.data(['end']) // Different link/path types can be defined here
+			.enter()
+			.append('svg:marker') // This section adds in the arrows
+			.attr('id', 'arrow')
+			.attr('viewBox', '0 -5 10 10')
+			.attr('refX', 22) //distance from node
+			.attr('refY', -1.5)
+			.attr('markerWidth', 6)
+			.attr('markerHeight', 6)
+			.attr('orient', 'auto')
+			.attr('fill', '#999')
+			.append('svg:path')
+			.attr('d', 'M0,-5L10,0L0,5');
+		svg
+			.append('svg:defs')
+			.selectAll('marker')
+			.data(['end']) // Different link/path types can be defined here
+			.enter()
+			.append('svg:marker') // This section adds in the arrows
+			.attr('id', 'Tblunt')
+			.attr('viewBox', '0 -5 10 10')
+			.attr('refX', 22)
+			.attr('refY', -1.5)
+			.attr('markerWidth', 6)
+			.attr('markerHeight', 6)
+			.attr('orient', 'auto')
+			.attr('fill', '#999')
+			.append('svg:path')
+			.attr('d', 'M 0,-6 L 3,-5 L 3,5 L 0,6'); //https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/d
+
 		// draw links
 		const link = zoomLayer
 			.append('g')
-			.attr('stroke', '#999')
-			.attr('fill', 'none')
+			//.attr('stroke', '#999')
+			.attr('fill', 'none') // without this the area of the arc gets colored
 			.attr('stroke-opacity', 0.6)
 			// .attr('marker-end', mapNumLinkAttrs) // 'url(#arrow)'
 			.selectAll('path')
 			.data(links)
-			.join('path');
+			.join('path')
+			.call((selection) => aesEdge(selection));
 
 		// draw nodes
 		const node = zoomLayer
 			.append('g')
 			.attr('stroke', '#fff')
-			.attr('stroke-width', 1.5)
+			.attr('stroke-width', 1)
 			.selectAll('g')
 			.data(nodes)
 			.join('g')
 			.join('g')
 			.call((selection) => drawShape(selection, $colorScale)) // map shape to moltype
+			// .attr('opacity', 0.1)
 			.on('click', (event: any, d: { id: string }) => highlightNode(d.id, links, node, link));
 
 		drawLegend(svgContainer, $colorScale);
@@ -100,7 +145,7 @@
 		});
 	}
 
-	// Redraw when data changes
+	// Redraw when data changes // it works here but not in concentric layout...!
 	$: if (networkData && networkData.nodes) {
 		renderNetwork();
 	}
