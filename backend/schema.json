@@ -6,13 +6,13 @@
       "jdbc": {
         "username": "postgres",
         "password": "postgres",
-        "jdbcUri": "jdbc:postgresql://db:5432/diffCellSig",
+        "jdbcUri": "jdbc:postgresql://db:5432/diffcellsig",
         "driverClass": "org.postgresql.Driver"
       }
     }
   ],
   "graph": {
-    "nodes": [
+    "vertices": [
       {
         "label": "node",
         "oneToOne": {
@@ -55,7 +55,7 @@
         }
       }
     ],
-    "links": [
+    "edges": [
       {
         "label": "link",
         "tableSource": {
@@ -63,8 +63,8 @@
           "schema": "public",
           "table": "links"
         },
-        "fromNode": "node",
-        "toNode": "node",
+        "fromVertex": "node",
+        "toVertex": "node",
         "fromId": {
           "fields": [
             {

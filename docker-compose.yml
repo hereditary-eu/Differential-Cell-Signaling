@@ -10,7 +10,8 @@ services:
     ports:
       - "5436:5432"
     volumes:
-      - ./pg-data/pg-data:/var/lib/postgresql/data
+      - ./data/pg-data:/var/lib/postgresql/data
+      - ./data/ingest_data:/ingest_data
   pgadmin:
     image: dpage/pgadmin4:9.8
     restart: always
@@ -21,9 +22,9 @@ services:
     ports:
       - "10005:80"
     volumes:
-      - ./servers.json:/pgadmin4/servers.json # preconfigured servers/connections
-      - ./pgpass:/pgpass # passwords for the connections in this file
-      # - ./pg-admin-data:/var/lib/pgadmin
+      - ./data/servers.json:/pgadmin4/servers.json # preconfigured servers/connections
+      - ./data/pgpass:/pgpass # passwords for the connections in this file
+      - ./data/pg-admin-data:/var/lib/pgadmin
     links:
       - "db:pgsql-server"
   puppygraph:
@@ -45,7 +46,7 @@ services:
       - "8182:8182"
       - "7687:7687"
     volumes:
-      - ./puppygraph-data:/data
+      - ./data/puppygraph:/data
 volumes:
   pg-data:
     external: false

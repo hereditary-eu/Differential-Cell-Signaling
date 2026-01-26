@@ -7,6 +7,10 @@ requires-python = ">=3.14"
 dependencies = [
     "decoupler>=2.1.4",
     "fastapi[standard]>=0.128.0",
+    "ipykernel>=7.1.0",
+    "jupyter>=1.1.1",
+    "neo4j>=6.1.0",
+    "networkx>=3.6.1",
     "omnipath>=1.0.12",
     "pandas>=2.3.3",
     "psycopg2-binary>=2.9.11",
