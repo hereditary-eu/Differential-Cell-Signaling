@@ -1,19 +1,24 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { sender, receiver, reverseSig, celltypes, filtersApplied } from '$lib/stores';
+	import {
+		selectedCaseStudy,
+		selectedComparison,
+		sender,
+		receiver,
+		reverseSig,
+		celltypes,
+		filtersApplied
+	} from '$lib/stores';
+	import { writable } from 'svelte/store';
 
 	const backend = import.meta.env.VITE_BACKEND_URL;
 
-	export let loadData: (url: string) => Promise<void>;
-	// export let filtersApplied: boolean;
-	// let filtersApplied = $props().filtersApplied;
-	// const {
-	// 	onFiltersApplied,
-	// 	loadData
-	// }: {
-	// 	onFiltersApplied?: () => void;
-	// 	loadData: (url: string) => Promise<void>;
-	// } = $props();
+	// Props
+	// export let loadFilteredData: (url: string) => Promise<void>;
+	const {
+		loadFilteredData
+	}: {
+		loadFilteredData: (url: string) => Promise<void>;
+	} = $props();
 
 	let filterIntrascore = false;
 	let filterInter = false;
@@ -23,22 +28,34 @@
 	let maxIntrascore = 1.0;
 	let interDir: 'up' | 'down' = 'up';
 	let focusOnLR = false;
-	// let filtersApplied = false;
-	let lastSender = '';
-	let lastReceiver = '';
-
-	onMount(async () => {
-		try {
-			const res = await fetch(`${backend}/api/static_info`);
-			const data = await res.json();
-			celltypes.set(data.celltypes);
-			console.log('Fetched celltypes:', $celltypes);
-		} catch (err) {
-			console.error('Error fetching celltypes:', err);
+	let lastSender = writable('');
+	let lastReceiver = writable('');
+	// reset cell types when case study changes
+	$effect(() => {
+		if ($selectedComparison) {
+			resetFilters();
 		}
 	});
+	function resetFilters() {
+		// reset cell types
+		sender.set($celltypes[0] || '');
+		receiver.set($celltypes[0] || '');
+
+		// reset filter toggles
+		filterIntrascore = false;
+		filterInter = false;
+		filterPv = true;
+		pvThresh = 0.05;
+		minIntrascore = 0.5;
+		maxIntrascore = 1.0;
+		interDir = 'up';
+		focusOnLR = false;
+
+		filtersApplied.set(true);
+	}
 	function applyFilters() {
 		const query = new URLSearchParams({
+			comparison: $selectedComparison,
 			sender: $sender,
 			receiver: $receiver,
 			reverse_sig: $reverseSig.toString(),
@@ -51,14 +68,11 @@
 			inter_dir: interDir,
 			focus_on_LR: focusOnLR.toString()
 		});
-		// filtersApplied = true;
-		lastSender = $sender;
-		lastReceiver = $receiver;
+		lastSender.set($sender);
+		lastReceiver.set($receiver);
 
-		// onFiltersApplied?.(); // send to parent component update
 		filtersApplied.set(true);
-		// const url = `${backend}/api/filtered_data?${query.toString()}`;
-		loadData(`${backend}/api/filtered_data?${query.toString()}`);
+		loadFilteredData(`${backend}/api/filtered_data?${query.toString()}`);
 	}
 	function updateSender(event: Event) {
 		const target = event.target as HTMLSelectElement;
@@ -76,8 +90,6 @@
 
 <div style="margin-left: 3%;">
 	<!-- Sidebar for filters -->
-	<!-- <h4>Filters Setting</h4> -->
-
 	<!--  cell type(s) selection -->
 	<div>
 		<p class="block mb-1 font-semibold">Select cell types:</p>
@@ -86,7 +98,7 @@
 				<label for="sender-select">Sender:</label>
 				<select
 					id="sender-select"
-					onchange={() => updateSender}
+					on:change={updateSender}
 					class="border rounded p-2"
 					style="width: 100%;"
 					bind:value={$sender}
@@ -101,7 +113,7 @@
 				<label for="receiver-select">Receiver:</label>
 				<select
 					id="receiver-select"
-					onchange={() => updateReceiver}
+					on:change={updateReceiver}
 					class="border rounded p-2"
 					style="width: 100%;"
 					bind:value={$receiver}
@@ -116,12 +128,12 @@
 	<!-- Include also reverse signaling -->
 	<div class="flex items-center gap-2">
 		{#if $sender === '' || $receiver === ''}
-			<input id="reverse-sig" type="checkbox" onchange={() => updateReverseSig} disabled />
+			<input id="reverse-sig" type="checkbox" on:change={updateReverseSig} disabled />
 		{:else}
 			<input
 				id="reverse-sig"
 				type="checkbox"
-				onchange={() => updateReverseSig}
+				on:change={updateReverseSig}
 				bind:checked={$reverseSig}
 			/>
 			<label for="reverse-sig">Include reverse signaling</label>
@@ -195,30 +207,18 @@
 
 	<!-- Apply button -->
 	<br />
-	{#if $sender === '' || $receiver === ''}
-		<button
-			id="apply-filters-btn"
-			type="button"
-			class="btn btn-dark disabled"
-			onclick={() => applyFilters()}
-			style="float: center;"
-		>
-			Apply filters
-		</button>
-	{:else}
-		<button
-			id="apply-filters-btn"
-			type="button"
-			class="btn btn-dark"
-			onclick={() => applyFilters()}
-			style="float: center;"
-		>
-			Apply filters
-		</button>
-	{/if}
+	<button
+		id="apply-filters-btn"
+		type="button"
+		class="btn btn-dark"
+		on:click={applyFilters}
+		disabled={$sender === '' || $receiver === ''}
+	>
+		Apply filters
+	</button>
 
 	<br />
-	{#if filtersApplied}<span class="badge bg-success"
-			>Selected cell types: {lastSender}, {lastReceiver}</span
+	{#if $filtersApplied}<span class="badge bg-success"
+			>Selected cell types: {$lastSender}, {$lastReceiver}</span
 		>{/if}
 </div>

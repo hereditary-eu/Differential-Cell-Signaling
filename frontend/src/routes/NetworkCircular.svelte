@@ -1,19 +1,28 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
-	import { sender, receiver, reverseSig, colorScale, filtersApplied } from '$lib/stores';
-	import { zoomBehavior, width, height, drawShape, highlightNode, drawLegend } from './utils';
+	import {
+		sender,
+		receiver,
+		reverseSig,
+		colorScale,
+		filtersApplied,
+		aesLRMapping,
+		aesTFMapping
+	} from '$lib/stores';
+	import {
+		zoomBehavior,
+		width,
+		height,
+		drawShape,
+		highlightNode,
+		drawLegend,
+		aesEdge,
+		defineMarkers,
+		trimPath
+	} from './utils';
 
-	// export let networkData: { nodes: any[]; links: any[] };
-	// export let filtersApplied: boolean;
-	const {
-		networkData = { nodes: [], links: [] }
-	}: {
-		networkData: { nodes: any[]; links: any[] };
-	} = $props();
-
-	// console.log('NetworkCircular - filtersApplied:', filtersApplied);
-
+	export let networkData: { nodes: any[]; links: any[] };
 	let svgContainer: SVGSVGElement;
 	let simulation: d3.Simulation<any, undefined>;
 
@@ -22,6 +31,8 @@
 
 		const nodes = networkData.nodes.map((d) => ({ ...d }));
 		const links = networkData.links.map((d) => ({ ...d }));
+
+		d3.select(svgContainer).selectAll('*').remove(); // clear previous renderings
 
 		// helper to identify nodes location
 		function isInnerCircle(d: any) {
@@ -47,27 +58,21 @@
 			return d.moltype === 'receptor' && d.celltype === $sender;
 		}
 
-		// clear previous renderings
-		d3.select(svgContainer).selectAll('*').remove();
-
 		// create the svg DOM element
 		const svg = d3
 			.select(svgContainer)
 			.attr('viewBox', [0, 0, width, height])
 			.style('background', 'transparent')
 			.style('cursor', 'grab');
-
+		defineMarkers(svg); // define markers for TFL
 		const zoomLayer = svg.append('g');
 		const { zoom, initialTransform } = zoomBehavior(zoomLayer);
-		// attach zoom to svg
-		svg.call(zoom as any);
-		// apply initial position
-		svg.call(zoom.transform as any, initialTransform);
+		svg.call(zoom as any); // attach zoom to svg
+		svg.call(zoom.transform as any, initialTransform); // apply initial position
 
 		// draw circles
 		var innerCircleRadius = 100;
 		var incrementRadius = 95;
-
 		var circle = zoomLayer
 			.selectAll('circle')
 			// if not reverseSig, draw 4 circles
@@ -80,7 +85,6 @@
 				return innerCircleRadius + (d - 1) * incrementRadius;
 			})
 			.attr('fill', 'none')
-			// .attr('stroke', '#ccc')
 			.attr('stroke', '#ababab')
 			.attr('stroke-dasharray', '4 2');
 
@@ -99,12 +103,13 @@
 
 		const link = zoomLayer
 			.append('g')
-			.attr('stroke', '#999')
+			// .attr('stroke', '#999') // this stroke is not defined in NetworkGraphZoom, not sure if it's needed
 			.attr('fill', 'none')
 			.attr('stroke-opacity', 0.6)
 			.selectAll('path')
 			.data(links)
-			.join('path');
+			.join('path')
+			.call((selection) => aesEdge(selection, $aesLRMapping, $aesTFMapping)); // map weight to color for LR edges
 
 		const node = zoomLayer
 			.append('g')
@@ -116,8 +121,6 @@
 			.join('g')
 			.call((selection) => drawShape(selection, $colorScale)) // map shape to moltype
 			.on('click', (event: any, d: { id: string }) => highlightNode(d.id, links, node, link));
-
-		drawLegend(svgContainer, $colorScale);
 
 		//reset when clicking on empty space
 		svg.on('click', (event) => {
@@ -197,32 +200,29 @@
 			});
 
 			link.attr('d', (d: any) => {
+				let end = { x: d.target.x, y: d.target.y };
+				if (d.type === 'TFL' && $aesTFMapping === 'endShape') {
+					end = trimPath(d.source, d.target, 10);
+				}
 				const dx = d.target.x - d.source.x;
 				const dy = d.target.y - d.source.y;
 				const dr = Math.sqrt(dx * dx + dy * dy);
 				return `
 					M ${d.source.x},${d.source.y}
-					A ${dr},${dr} 0 0 1 ${d.target.x},${d.target.y}
+					A ${dr},${dr} 0 0 1 ${end.x},${end.y}
 				`;
 			});
 			node.attr('transform', (d: any) => `translate(${d.x}, ${d.y})`);
 		});
+		drawLegend(svgContainer, $colorScale, $aesLRMapping, $aesTFMapping);
 	}
 
-	// redraw when data changes
-
-	// $: if (networkData) {
-	// && networkData.nodes) {
-	$effect(() => {
-		if (filtersApplied) {
-			renderNetwork();
-		}
-	});
-
+	$: if (networkData && networkData.nodes && $aesLRMapping && $aesTFMapping) {
+		renderNetwork();
+	}
 	onMount(() => {
 		renderNetwork();
 	});
-
 	onDestroy(() => {
 		simulation?.stop();
 	});

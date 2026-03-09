@@ -37,7 +37,7 @@ export function zoomBehavior(
 // export function to map moltype to shape
 export function drawShape(
     selection: d3.Selection<any, any, any, any>,
-    colorScale: (value: string) => string
+    colorScale: d3.ScaleOrdinal<string, string, string>
 ) {
 		selection.each(function (d: any) {
 			const g = d3.select(this);
@@ -67,38 +67,43 @@ export function drawShape(
 // interpolateViridis wants values between 0 and 1 -> do minmax scale
 // TODO in the future, now assuming scSeqComm output: [-1,1]
 export function aesEdge(
-    selection: d3.Selection<any, any, any, any>
+    selection: d3.Selection<any, any, any, any>,
+    aesLRMapping: 'reset' | 'viridis' | 'volcano',
+    aesTFMapping: 'reset' | 'endShape'
 ) {
 
         selection.each(function (d: any) {
             const g = d3.select(this);
             g.attr('stroke', '#999'); // default color for other edges
-            
             if (d.type === 'LR') {
-                // VIRIDIS OPTION
-                // const norm_weight = (d.weight + 1) / 2; // assuming [-1,1]
-                // g.attr('stroke', d3.interpolateViridis(norm_weight));
-                if (d.weight < 0) {
-                    g.attr('stroke', '#1E90FF'); // blue for under-activation
-                } else {
-                    g.attr('stroke', '#720000'); //'#8B0000'); // darkred for over-activation
+                if (aesLRMapping === 'viridis') {
+                    const norm_weight = (d.weight + 1) / 2; // assuming [-1,1]
+                    g.attr('stroke', d3.interpolateViridis(norm_weight));
+                } else if (aesLRMapping === 'volcano') {
+                    if (d.weight < 0) {
+                        g.attr('stroke', '#1E90FF'); // blue for under-activation
+                    } else {
+                        g.attr('stroke', '#720000'); //'#8B0000'); // darkred for over-activation
+                    }
                 }
                 g.attr('stroke-opacity', 0.8);
                 
             } else if (d.type === 'TFL') {
-                if (d.weight < 0) {
-                    // blunt end
-                    g.attr('marker-end', 'url(#Tblunt)'); // not working
-                    // g.attr('stroke', '#000000'); //DEBUG
-                    // console.log('blunt end for TFL with weight <0')
-                } else {
-                    // arrow end
-                    // g.attr('stroke', '#FFA500'); //DEBUG
-                    g.attr('marker-end', 'url(#arrow)'); // not working
-                    // console.log('arrow end for TFL with weight >=0')
-                    
-                }
+                if (aesTFMapping === 'endShape') {
+                    if (d.weight < 0) {
+                        // blunt end
+                        g.attr('marker-end', 'url(#Tblunt)'); // not working
+                        // g.attr('stroke', '#000000'); //DEBUG
+                        // console.log('blunt end for TFL with weight <0')
+                    } else {
+                        // arrow end
+                        // g.attr('stroke', '#FFA500'); //DEBUG
+                        g.attr('marker-end', 'url(#arrow)'); // not working
+                        // console.log('arrow end for TFL with weight >=0')
+                        
+                    }
             }
+        }
         });
 }
 
@@ -129,10 +134,13 @@ export function highlightNode(selectedId: string, links: any, node: d3.Selection
 // to do: make same size triangle and square.. more similar to parameters used for plotting
 export function drawLegend(
     svg: SVGSVGElement,
-    colorScale: d3.ScaleOrdinal<string, any, undefined>,
+    colorScale: d3.ScaleOrdinal<string, any, string>,
+    aesLRMapping: 'reset' | 'viridis' | 'volcano',
+    aesTFMapping: 'reset' | 'endShape',
     symbolSize: number = 6,
     spacing: number = 7,
-    fontSize: number = 5
+    fontSize: number = 5,
+    full_net: boolean = false
 ) {
     // cell type legend
     const g = d3
@@ -198,4 +206,118 @@ export function drawLegend(
         .attr("dominant-baseline", "middle")
         .style("font-size", `${fontSize}px`)
         .text(d => d);
+    if (!full_net) {
+        // LR legend
+        let offsetY = 50 + items.length * spacing;
+        if (aesLRMapping !== 'reset') {
+            const lrLegend = d3.select(svg).append("g").attr("class", "legend").attr("transform", `translate(5, ${offsetY})`);
+            lrLegend.append("text")
+            .style("font-size", `${fontSize + 1}px`)
+            .text("Ligand-Receptor:");
+            const data = [
+            { label: "Over-activation", color: aesLRMapping === 'volcano' ? "#720000" : d3.interpolateViridis(1) },
+            { label: "Under-activation", color: aesLRMapping === 'volcano' ? "#1E90FF" : d3.interpolateViridis(0) }
+            ];
+            const group = lrLegend
+            .selectAll("g.lr-item")
+            .data(data)
+            .enter()
+            .append("g")
+            .attr("transform", (_, i) => `translate(0, ${(i + 1) * spacing})`);
+
+            group.append("line")
+                .attr("x1", 0)
+                .attr("x2", symbolSize + 3)
+                .attr("stroke-width", 2)
+                .attr("stroke", d => d.color);
+
+            group.append("text")
+                .attr("x", symbolSize + 6)
+                .attr("y", 0)
+                .attr("dominant-baseline", "middle")
+                .style("font-size", `${fontSize}px`)
+                .text(d => d.label);
+
+            offsetY += 25; // add space before tfl legend
+        }
+        // TFL legend
+        if (aesTFMapping === 'endShape') {
+            const tfLegend = d3.select(svg)
+                .append("g")
+                .attr("class", "legend")
+                .attr("transform", `translate(5, ${offsetY})`);
+            tfLegend.append("text")
+                .style("font-size", `${fontSize + 1}px`)
+                .text("TF regulation:");
+            const data = [
+                { label: "Promoting", marker: "url(#arrow)" },
+                { label: "Inhibiting", marker: "url(#Tblunt)" }
+            ];
+            const group = tfLegend
+                .selectAll("g.tf-item")
+                .data(data)
+                .enter()
+                .append("g")
+                .attr("transform", (_, i) => `translate(0, ${(i + 1) * spacing})`);
+
+            group.append("line")
+                .attr("x1", 0)
+                .attr("x2", 10)
+                .attr("y1", 0)
+                .attr("y2", 0)
+                .attr("stroke", "#999")
+                .attr("stroke-width", 0.5)
+                .attr("marker-end", d => d.marker)
+                .attr("fill", "none");
+
+            group.append("text")
+                .attr("x", symbolSize + 6)
+                .attr("y", 0)
+                .attr("dominant-baseline", "middle")
+                .style("font-size", `${fontSize}px`)
+                .text(d => d.label);
+                }
+            }
 }
+export function trimPath(source: { x: number; y: number }, target: { x: number; y: number }, r = 10) {
+			const dx = target.x - source.x;
+			const dy = target.y - source.y;
+			const dist = Math.sqrt(dx * dx + dy * dy);
+
+			const ratio = (dist - r) / dist;
+
+			return {
+				x: source.x + dx * ratio,
+				y: source.y + dy * ratio
+			};
+		}
+
+export function defineMarkers(
+    svg: d3.Selection<SVGSVGElement, unknown, null, undefined>) {
+        const defs = svg.append('defs');
+		defs
+			.append('marker')
+			.attr('id', 'arrow')
+			.attr('viewBox', '0 -5 10 10')
+			.attr('refX', 9)
+			.attr('refY', 0)
+			.attr('markerWidth', 6)
+			.attr('markerHeight', 6)
+			.attr('orient', 'auto')
+			.append('path')
+			.attr('d', 'M0,-5L10,0L0,5')
+			.attr('fill', '#999');
+		defs
+			.append('marker')
+			.attr('id', 'Tblunt')
+			.attr('viewBox', '-2 -6 4 12')
+			.attr('refX', 1)
+			.attr('refY', 0)
+			.attr('markerWidth', 10)
+			.attr('markerHeight', 10)
+			.attr('orient', 'auto')
+			.append('path')
+			.attr('d', 'M0,-6L0,6')
+			.attr('stroke', '#999')
+			.attr('stroke-width', 2);
+    }

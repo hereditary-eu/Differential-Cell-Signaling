@@ -50,6 +50,16 @@
               "field": "intrascore",
               "alias": "intrascore",
               "type": "DOUBLE"
+            },
+            {
+              "field": "casestudy",
+              "alias": "casestudy",
+              "type": "String"
+            },
+            {
+              "field": "comparison",
+              "alias": "comparison",
+              "type": "String"
             }
           ]
         }
@@ -117,6 +127,16 @@
             "field": "layer",
             "alias": "layer",
             "type": "Int"
+          },
+          {
+            "field": "casestudy",
+            "alias": "casestudy",
+            "type": "String"
+          },
+          {
+            "field": "comparison",
+            "alias": "comparison",
+            "type": "String"
           }
         ]
       }

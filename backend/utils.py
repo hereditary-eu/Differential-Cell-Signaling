@@ -41,7 +41,7 @@ def sanitizeCelltypes(ccc : pd.DataFrame, tfl : pd.DataFrame, ref_file : str):
     return ccc, tfl
 
 
-def extract_rtf(ccc : pd.DataFrame):
+def extract_rtf(ccc : pd.DataFrame, comparison : str):
     required_cols = ["receptor", "receiver", "tfactors", "S_intra"]
     missing = [c for c in required_cols if c not in ccc.columns]
     if missing:
@@ -71,8 +71,8 @@ def extract_rtf(ccc : pd.DataFrame):
                     "intrascore": None
                 })
             rtf_links.append({
-                    "from": row["receptor"]+"__"+row["receiver"]+"__receptor",
-                    "to": tf+"__"+row["receiver"]+"__TF",
+                    "from": row["receptor"]+"__"+row["receiver"]+"__receptor"+ '__' + comparison,
+                    "to": tf+"__"+row["receiver"]+"__TF"+ '__' + comparison,
                     "type": "RTF",
                     "weight": None,
                     "significance": None,
@@ -111,8 +111,8 @@ def extract_ccc(ccc : pd.DataFrame, conditions = ["cond", "ref"], pval_col = "pv
                 "intrascore": row["S_intra"]
             })
         ccc_links.append({
-                "from": row["ligand"]+"__"+row["sender"]+"__ligand",
-                "to": row["receptor"]+"__"+row["receiver"]+"__receptor",
+                "from": row["ligand"]+"__"+row["sender"]+"__ligand"+ '__' + conditions[0] + '_vs_' + conditions[1], 
+                "to": row["receptor"]+"__"+row["receiver"]+"__receptor"+ '__' + conditions[0] + '_vs_' + conditions[1],
                 "type": "LR",
                 "weight": row[col_cond] - row[col_ref], #difference in inter score between conditions
                 "significance": row[pval_col],
@@ -124,7 +124,7 @@ def extract_ccc(ccc : pd.DataFrame, conditions = ["cond", "ref"], pval_col = "pv
 
     return ccc_nodes, ccc_links
 
-def extract_tfl(tfl : pd.DataFrame, tf_db : pd.DataFrame, ccc : pd.DataFrame, cond_colname : str, score_colname = "consensus_mean"):
+def extract_tfl(tfl : pd.DataFrame, tf_db : pd.DataFrame, ccc : pd.DataFrame, comparison : str):
     # tfl columns: Condition, cellType, TF, consesus_mean
     # tf_db columns: source (TF), target (gene), weight (1 or -1)  (in older versions, weight was called mor)
     
@@ -133,7 +133,7 @@ def extract_tfl(tfl : pd.DataFrame, tf_db : pd.DataFrame, ccc : pd.DataFrame, co
     # join (filtered) tf_db with ccc on L name
     # create nodes and links dataframes
     # tf_db_filt = tf_db[tf_db['source'].isin(set(tfl['TF']))] #filter tf_db on diff TFs results
-    required_cols = [cond_colname, "cellType", "TF", score_colname]
+    required_cols = ["cellType", "TF"]
     missing = [c for c in required_cols if c not in tfl.columns]
     if missing:
         raise ValueError(f"Input TFL dataframe is missing required columns: {missing}\n Found columns: {tfl.columns.tolist()}")
@@ -153,8 +153,8 @@ def extract_tfl(tfl : pd.DataFrame, tf_db : pd.DataFrame, ccc : pd.DataFrame, co
     tf_links = pd.merge(tfl, tf_db_filt, on = 'TF', how = 'left') #join on TF name, this will repeat links for every celltype in which TF is active
     tf_links = tf_links.dropna(subset=['target']) #drop rows where TF has no target in tf_db_filt 
 
-    tf_links['from'] = tf_links['TF'] + '__' + tf_links['cellType'] + '__TF'
-    tf_links['to'] = tf_links['target'] + '__' + tf_links['cellType'] + '__ligand'
+    tf_links['from'] = tf_links['TF'] + '__' + tf_links['cellType'] + '__TF' + '__' + comparison
+    tf_links['to'] = tf_links['target'] + '__' + tf_links['cellType'] + '__ligand' + '__' + comparison
     tf_links['type'] = 'TFL'
     tf_links['layer'] = 1
     tf_links['significance'] = None #no significance for TFL links from decoupleR
@@ -166,6 +166,22 @@ def extract_tfl(tfl : pd.DataFrame, tf_db : pd.DataFrame, ccc : pd.DataFrame, co
     tf_nodes['intrascore'] = None #no intrascore for TF nodes for now (eventually in the future store differential TF activity value)
 
     return tf_nodes, tf_links[['from', 'to', 'type', 'weight', 'layer', 'significance']]
+
+def aggregate_full_net(ccc : pd.DataFrame, tfl : pd.DataFrame, tf_db : pd.DataFrame, conditions : list, comparison : str):
+    ccc_nodes, ccc_links = extract_ccc(ccc, conditions = conditions) #in the future, pass col names for case study flexibility
+    print('CCC extraction done')
+    tfl_nodes, tfl_links = extract_tfl(tfl, tf_db, ccc, comparison = comparison) #in the future, pass col names for case study flexibility
+    print('TFL extraction done')
+    rtf_nodes, rtf_links = extract_rtf(ccc, comparison = comparison)
+    print('RTF extraction done')
+
+    all_links = pd.concat([tfl_links, ccc_links, rtf_links], ignore_index=True).drop_duplicates().reset_index(drop=True)
+    all_nodes = pd.concat([tfl_nodes, ccc_nodes, rtf_nodes], ignore_index=True).drop_duplicates().reset_index(drop=True)
+    #FOR DEBUGGING
+    all_nodes.to_csv('all_nodes_debug.csv', index=False)
+    all_links.to_csv('all_links_debug.csv', index=False)
+    # print('Aggregation and bothLR nodes annotation done')
+    return all_nodes, all_links
 
 
 def annotate_bothLR_nodes(nodes : pd.DataFrame):
@@ -188,19 +204,94 @@ def annotate_bothLR_nodes(nodes : pd.DataFrame):
     return nodes
 
 
-def aggregate_full_net(ccc : pd.DataFrame, tfl : pd.DataFrame, tf_db : pd.DataFrame, conditions : list, cond_colname = "Genotype"):
-    ccc_nodes, ccc_links = extract_ccc(ccc, conditions = conditions) #in the future, pass col names for case study flexibility
-    print('CCC extraction done')
-    tfl_nodes, tfl_links = extract_tfl(tfl, tf_db, ccc, cond_colname) #in the future, pass col names for case study flexibility
-    print('TFL extraction done')
-    rtf_nodes, rtf_links = extract_rtf(ccc)
-    print('RTF extraction done')
+def find_cycles(edges):
+    #make LR links undirected
+    print(edges.columns)
+    if 'type' in edges.columns:
+        lr = edges[edges['type'] == 'LR']
+        edges = pd.concat([edges, lr.rename(columns={'from':'to', 'to':'from'})], ignore_index=True)
+        
+    from collections import defaultdict
+    # Build adjacency list
+    graph = defaultdict(list)
+    nodes = set()
 
-    all_links = pd.concat([tfl_links, ccc_links, rtf_links], ignore_index=True).drop_duplicates().reset_index(drop=True)
-    all_nodes = pd.concat([tfl_nodes, ccc_nodes, rtf_nodes], ignore_index=True).drop_duplicates().reset_index(drop=True)
-    #FOR DEBUGGING
-    all_nodes.to_csv('all_nodes_debug.csv', index=False)
-    all_links.to_csv('all_links_debug.csv', index=False)
-    # print('Aggregation and bothLR nodes annotation done')
+    for u, v in edges[['from', 'to']].values:
+        graph[u].append(v)
+        nodes.add(u)
+        nodes.add(v)
 
-    return all_nodes, all_links
+    visited = set()
+    rec_stack = [] #current recursion stack
+    cycles = []
+
+    def dfs(node): #depth-first search
+        visited.add(node)
+        rec_stack.append(node)
+
+        for neighbor in graph[node]:
+            if neighbor not in visited:
+                dfs(neighbor)
+            elif neighbor in rec_stack:
+                # Cycle detected
+                cycle_start_index = rec_stack.index(neighbor)
+                cycle = rec_stack[cycle_start_index:] + [neighbor]
+                if len(cycle) > 3: #ignore trivial cycles of length 2 (A->B->A) which are expected due to undirected LR links
+                    cycles.append(cycle)
+        rec_stack.pop()
+    for node in nodes:
+        if node not in visited:
+            dfs(node)
+    return cycles
+
+import pandas as pd
+
+def expand_links_dataframe(links: pd.DataFrame) -> pd.DataFrame:
+    """
+    Convert aggregated links dataframe into expanded format for students with
+    source/target node attributes and directionality flag.
+    """
+    # Split source column
+    source_split = links['from'].str.split('__', expand=True)
+    source_split.columns = ['source_name', 'source_celltype', 'source_moltype']
+    # Split target column
+    target_split = links['to'].str.split('__', expand=True)
+    target_split.columns = ['target_name', 'target_celltype', 'target_moltype']
+    # Combine 
+    expanded = pd.concat(
+        [
+            source_split,
+            target_split,
+            links[['type', 'weight', 'layer']]
+        ],
+        axis=1
+    )
+    # Add directionality column
+    expanded['is_directed'] = expanded['type'] != 'LR' #LR links are undirected, others are directed
+    return expanded
+
+
+def adapt_input_data(input_ccc: str, input_tf : str, out_folder : str, case_study : str, Comparison : str):
+    ccc = pd.read_csv(input_ccc)
+    tf = pd.read_csv(input_tf)
+    
+    target_cols_ccc = ['ligand', 'receptor', 
+                       'sender', 'receiver', 
+                       'S_intra', 'pvalue_adj_S_inter', 
+                       'S_inter_cond', 'S_inter_ref']
+    target_cols_tf = ['TF', 'CellType']
+
+    missing_ccc = [c for c in target_cols_ccc if c not in ccc.columns]
+    missing_tf = [c for c in target_cols_tf if c not in tf.columns]
+    if missing_ccc or missing_tf:
+        raise ValueError(f"Input data is missing required columns. Missing in CCC: {missing_ccc}, Missing in TF: {missing_tf}")
+    
+    if 'CaseStudy' not in ccc.columns:
+        ccc['CaseStudy'] = case_study
+    if 'Comparison' not in ccc.columns:
+        ccc['Comparison'] = Comparison
+    if 'CaseStudy' not in tf.columns:
+        tf['CaseStudy'] = case_study
+    if 'Comparison' not in tf.columns:
+        tf['Comparison'] = Comparison
+

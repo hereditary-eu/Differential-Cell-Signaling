@@ -2,27 +2,23 @@
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
 	import {
-		zoomBehavior,
-		width,
-		height,
-		drawShape,
-		drawLegend,
-		highlightNode,
-		aesEdge,
-		trimPath,
-		defineMarkers
-	} from './utils';
-	import { colorScale, selectedNode, aesLRMapping, aesTFMapping } from '$lib/stores';
+		sender,
+		receiver,
+		reverseSig,
+		colorScale,
+		filtersApplied,
+		aesLRMapping,
+		aesTFMapping
+	} from '$lib/stores';
+	import { zoomBehavior, width, height, drawShape, highlightNode, drawLegend } from './utils';
 
-	export let networkData: { nodes: any[]; links: any[] };
+	export let fullNet: { nodes: any[]; links: any[] };
 	let svgContainer: SVGSVGElement;
 	let simulation: d3.Simulation<any, undefined>;
 
 	function renderNetwork() {
-		if (!networkData?.nodes?.length) return;
-
-		const nodes = networkData.nodes.map((d) => ({ ...d }));
-		const links = networkData.links.map((d) => ({ ...d }));
+		const nodes = fullNet.nodes.map((d) => ({ ...d }));
+		const links = fullNet.links.map((d) => ({ ...d }));
 
 		d3.select(svgContainer).selectAll('*').remove(); // clear previous renderings
 
@@ -31,7 +27,7 @@
 			.attr('viewBox', [0, 0, width, height])
 			.style('background', 'transparent')
 			.style('cursor', 'grab');
-		defineMarkers(svg); // define markers for TFL
+
 		const zoomLayer = svg.append('g');
 		const { zoom, initialTransform } = zoomBehavior(zoomLayer);
 		svg.call(zoom as any);
@@ -54,12 +50,12 @@
 		// draw links
 		const link = zoomLayer
 			.append('g')
-			.attr('fill', 'none') // without this the area of the arc gets colored
+			.attr('fill', 'none')
+			.attr('stroke', '#999')
 			.attr('stroke-opacity', 0.6)
 			.selectAll('path')
 			.data(links)
-			.join('path')
-			.call((selection) => aesEdge(selection, $aesLRMapping, $aesTFMapping));
+			.join('path');
 
 		// draw nodes
 		const node = zoomLayer
@@ -71,10 +67,9 @@
 			.join('g')
 			.join('g')
 			.call((selection) => drawShape(selection, $colorScale)) // map shape to moltype
-			.on('click', (event: any, d: { id: string }) => {
-				highlightNode(d.id, links, node, link);
-				// selectedNode.set(d.id);
-			});
+			.on('click', (event: any, d: { id: string }) => highlightNode(d.id, links, node, link));
+
+		drawLegend(svgContainer, $colorScale, $aesLRMapping, $aesTFMapping, 6, 7, 5, true);
 
 		//reset when clicking on empty space
 		svg.on('click', (event) => {
@@ -97,31 +92,27 @@
 		//update positions during simulation
 		simulation.on('tick', () => {
 			link.attr('d', (d: any) => {
-				let end = { x: d.target.x, y: d.target.y };
-				if (d.type === 'TFL' && $aesTFMapping === 'endShape') {
-					end = trimPath(d.source, d.target, 10);
-				}
 				const dx = d.target.x - d.source.x;
 				const dy = d.target.y - d.source.y;
 				const dr = Math.sqrt(dx * dx + dy * dy); // radius for arc
-				// const dr = Math.sqrt(dx * dx + dy * dy) * 1.5; // increase curvature by multiplying
 				return `
 					M ${d.source.x},${d.source.y}
-					A ${dr},${dr} 0 0 1 ${end.x},${end.y}
+					A ${dr},${dr} 0 0 1 ${d.target.x},${d.target.y}
 				`;
 			});
 			node.attr('transform', (d: any) => `translate(${d.x}, ${d.y})`);
 		});
-		drawLegend(svgContainer, $colorScale, $aesLRMapping, $aesTFMapping);
 	}
 
-	// Redraw when data changes
-	$: if (networkData && networkData.nodes && $aesLRMapping && $aesTFMapping) {
+	// Redraw when data changes // it works here but not in concentric layout...!
+	$: if (fullNet && fullNet.nodes) {
 		renderNetwork();
 	}
+
 	onMount(() => {
 		renderNetwork();
 	});
+
 	onDestroy(() => {
 		simulation?.stop();
 	});

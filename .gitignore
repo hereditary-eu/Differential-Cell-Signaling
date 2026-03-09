@@ -22,9 +22,12 @@ backend/schema-schema.json
 backend/working-schema.json
 backend/models.py
 
+
+**/newNetworkCircular.svelte
 #frontend has its own .gitignore
 
 **/data/
+**/*.csv
 **/tmp/
 .env
 .env.*
