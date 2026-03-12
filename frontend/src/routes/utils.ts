@@ -8,6 +8,7 @@ const initialScale = 0.3;
 const initialX = width / 3;
 const initialY = height / 3;
 
+
 export interface ZoomOptions {
     scaleExtent?: [number, number];
     wheelSensitivity?: number;

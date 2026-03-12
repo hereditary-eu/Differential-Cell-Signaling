@@ -3,11 +3,13 @@
 *.pid
 
 #postrgesql + puppygraph
-pg-data/
-pgpass/
-servers.json/
-puppygraph-data-backup/
-puppygraph-data/
+data/pg-data/
+data/pgpass/
+data/pgpassp
+data/servers.json/
+data/puppygraph-data-backup/
+data/puppygraph/
+data/pg-admin-data/
 
 
 # py venv
@@ -35,6 +37,9 @@ backend/models.py
 **.out
 personalREADME.txt
 
+puppygraph-data/
+puppygraph-data-backup/
+pg-data/
 
 # cluttering files
 backend/molecules.txt 
