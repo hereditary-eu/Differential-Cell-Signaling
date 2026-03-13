@@ -6,7 +6,6 @@
 		receiver,
 		reverseSig,
 		colorScale,
-		filtersApplied,
 		aesLRMapping,
 		aesTFMapping
 	} from '$lib/stores';

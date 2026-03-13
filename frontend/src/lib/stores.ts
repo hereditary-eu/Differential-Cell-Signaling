@@ -1,11 +1,10 @@
 import { scaleOrdinal, schemeTableau10 } from "d3";
 import { writable, derived } from "svelte/store"; 
-import type { NeighborhoodData, Node, Link } from "./types";
+import type { NeighborhoodData} from "./types";
 export const sender = writable('');
 export const receiver = writable(''); 
 export const reverseSig = writable(false);
 export const celltypes = writable([]);
-// remember this is js file, cant use svelte 5 $derived synthax
 export const colorScale = derived(celltypes, ($celltypes): d3.ScaleOrdinal<string, string, string> => {
     return scaleOrdinal<string, string, string>()  // Explicitly typed generic parameters including unknown type
         .domain($celltypes)

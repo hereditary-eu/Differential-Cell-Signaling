@@ -1,15 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
-	import {
-		sender,
-		receiver,
-		reverseSig,
-		colorScale,
-		filtersApplied,
-		aesLRMapping,
-		aesTFMapping
-	} from '$lib/stores';
+	import { colorScale, aesLRMapping, aesTFMapping } from '$lib/stores';
 	import { zoomBehavior, width, height, drawShape, highlightNode, drawLegend } from './utils';
 
 	export let fullNet: { nodes: any[]; links: any[] };

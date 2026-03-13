@@ -1,6 +1,5 @@
 <script lang="ts">
 	import {
-		selectedCaseStudy,
 		selectedComparison,
 		sender,
 		receiver,
@@ -20,14 +19,14 @@
 		loadFilteredData: (url: string) => Promise<void>;
 	} = $props();
 
-	let filterIntrascore = false;
-	let filterInter = false;
-	let filterPv = true;
-	let pvThresh: number = 0.05;
-	let minIntrascore = 0.5;
-	let maxIntrascore = 1.0;
-	let interDir: 'up' | 'down' = 'up';
-	let focusOnLR = false;
+	let filterIntrascore = $state(false);
+	let filterInter = $state(false);
+	let filterPv = $state(true);
+	let pvThresh = $state(0.05);
+	let minIntrascore = $state(0.5);
+	let maxIntrascore = $state(1.0);
+	let interDir = $state('up'); // let interDir: 'up' | 'down' = 'up';
+	let focusOnLR = $state(false);
 	let lastSender = writable('');
 	let lastReceiver = writable('');
 	// reset cell types when case study changes
@@ -74,18 +73,6 @@
 		filtersApplied.set(true);
 		loadFilteredData(`${backend}/api/filtered_data?${query.toString()}`);
 	}
-	function updateSender(event: Event) {
-		const target = event.target as HTMLSelectElement;
-		sender.set(target.value);
-	}
-	function updateReceiver(event: Event) {
-		const target = event.target as HTMLSelectElement;
-		receiver.set(target.value);
-	}
-	function updateReverseSig(event: Event) {
-		const target = event.target as HTMLInputElement;
-		reverseSig.set(target.checked);
-	}
 </script>
 
 <div style="margin-left: 3%;">
@@ -98,7 +85,6 @@
 				<label for="sender-select">Sender:</label>
 				<select
 					id="sender-select"
-					on:change={updateSender}
 					class="border rounded p-2"
 					style="width: 100%;"
 					bind:value={$sender}
@@ -113,7 +99,6 @@
 				<label for="receiver-select">Receiver:</label>
 				<select
 					id="receiver-select"
-					on:change={updateReceiver}
 					class="border rounded p-2"
 					style="width: 100%;"
 					bind:value={$receiver}
@@ -128,14 +113,9 @@
 	<!-- Include also reverse signaling -->
 	<div class="flex items-center gap-2">
 		{#if $sender === '' || $receiver === ''}
-			<input id="reverse-sig" type="checkbox" on:change={updateReverseSig} disabled />
+			<input id="reverse-sig" type="checkbox" disabled />
 		{:else}
-			<input
-				id="reverse-sig"
-				type="checkbox"
-				on:change={updateReverseSig}
-				bind:checked={$reverseSig}
-			/>
+			<input id="reverse-sig" type="checkbox" bind:checked={$reverseSig} />
 			<label for="reverse-sig">Include reverse signaling</label>
 		{/if}
 	</div>
@@ -211,7 +191,7 @@
 		id="apply-filters-btn"
 		type="button"
 		class="btn btn-dark"
-		on:click={applyFilters}
+		onclick={() => applyFilters()}
 		disabled={$sender === '' || $receiver === ''}
 	>
 		Apply filters

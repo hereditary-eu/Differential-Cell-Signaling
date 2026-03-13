@@ -6,7 +6,7 @@
 	import NetworkGraphZoom from './NetworkGraphZoom.svelte';
 	import NetworkCircular from './NetworkCircular.svelte';
 	// import NetworkTree from './NetworkTree.svelte';
-	import NewNetworkCircular from './newNetworkCircular.svelte';
+	// import NewNetworkCircular from './newNetworkCircular.svelte';
 
 	import {
 		celltypes,

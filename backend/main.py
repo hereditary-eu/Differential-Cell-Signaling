@@ -1,11 +1,10 @@
 from fastapi import FastAPI
 from fastapi import Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import HTTPException
 import psycopg2
 import psycopg2.extras
-from typing import Literal, List, Optional
-from collections import defaultdict
+from typing import Literal
+# from collections import defaultdict
 import networkx as nx
 
 app = FastAPI()
