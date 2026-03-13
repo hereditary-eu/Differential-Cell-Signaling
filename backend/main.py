@@ -24,7 +24,7 @@ app.add_middleware(
 
 def get_db_connection():
     return psycopg2.connect(
-        dbname='diffCellSig',
+        dbname='diffcellsig',
         user='postgres',
         password='postgres',
         host='localhost',

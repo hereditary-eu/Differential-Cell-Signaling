@@ -7,7 +7,7 @@ from pathlib import Path
 from .utils import aggregate_full_net, find_cycles, expand_links_dataframe
 import decoupler as dc
 
-DB_URL = 'postgresql+psycopg://postgres:postgres@localhost:5436/diffCellSig'
+DB_URL = 'postgresql+psycopg://postgres:postgres@localhost:5436/diffcellsig'
 Base = declarative_base() #serves as a factory for mapping Python classes to db tables in an ORM
 
 # TO DO: implement ingestion for user-uploaded case study

@@ -1,7 +1,7 @@
 {
   "catalogs": [
     {
-      "name": "diffCellSig",
+      "name": "diffcellsig",
       "type": "postgresql",
       "jdbc": {
         "username": "postgres",
@@ -17,7 +17,7 @@
         "label": "node",
         "oneToOne": {
           "tableSource": {
-            "catalog": "diffCellSig",
+            "catalog": "diffcellsig",
             "schema": "public",
             "table": "nodes"
           },
@@ -69,7 +69,7 @@
       {
         "label": "link",
         "tableSource": {
-          "catalog": "diffCellSig",
+          "catalog": "diffcellsig",
           "schema": "public",
           "table": "links"
         },
