@@ -357,6 +357,10 @@ def get_filtered_network(
             JOIN nodes nt ON nt.id = l.target
             WHERE l.source = ANY(%s)
                 AND l.target = ANY(%s)
+                AND (
+                    l.type != 'LR'
+                    OR ns.celltype != nt.celltype
+                    )
         """
         link_params =[valid_node_ids, valid_node_ids]
     else: #normal case: only sender->receiver
