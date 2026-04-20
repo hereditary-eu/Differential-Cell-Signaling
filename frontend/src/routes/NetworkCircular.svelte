@@ -27,7 +27,8 @@
 
 	function renderNetwork() {
 		if (!networkData?.nodes?.length) return;
-
+		simulation?.stop();
+		console.log('aesTFMapping in NetworkCircular:', $aesTFMapping);
 		const nodes = networkData.nodes.map((d) => ({ ...d }));
 		const links = networkData.links.map((d) => ({ ...d }));
 
@@ -35,11 +36,7 @@
 
 		// helper to identify nodes location
 		function isInnerCircle(d: any) {
-			return (
-				d.moltype === 'TF' && d.celltype === $sender
-				// eventually need to fix by checking type of links associated to TF (to handle autocrine cases)
-				//&& d.links?.some((l: any) => l.type === 'TFL')
-			);
+			return d.moltype === 'TF' && d.celltype === $sender;
 		}
 		function isSecondCircle(d: any) {
 			return d.moltype === 'ligand' && d.celltype === $sender;
@@ -68,10 +65,13 @@
 		const { zoom, initialTransform } = zoomBehavior(zoomLayer);
 		svg.call(zoom as any); // attach zoom to svg
 		svg.call(zoom.transform as any, initialTransform); // apply initial position
+		//center of draw
+		const cx = width / 2;
+		const cy = height / 2;
 
 		// draw circles
-		var innerCircleRadius = 100;
-		var incrementRadius = 95;
+		var innerCircleRadius = 130;
+		var incrementRadius = 110;
 		var circle = zoomLayer
 			.selectAll('circle')
 			// if not reverseSig, draw 4 circles
@@ -94,7 +94,7 @@
 				d3
 					.forceLink(links)
 					.id((d: any) => d.id)
-					.distance(15)
+					// .distance(15)
 					.strength(0.1)
 			)
 			.force('charge', d3.forceManyBody().strength(-23))
@@ -102,13 +102,11 @@
 
 		const link = zoomLayer
 			.append('g')
-			// .attr('stroke', '#999') // this stroke is not defined in NetworkGraphZoom, not sure if it's needed
 			.attr('fill', 'none')
 			.attr('stroke-opacity', 0.6)
 			.selectAll('path')
 			.data(links)
-			.join('path')
-			.call((selection) => aesEdge(selection, $aesLRMapping, $aesTFMapping)); // map weight to color for LR edges
+			.join('path');
 
 		const node = zoomLayer
 			.append('g')
@@ -116,7 +114,6 @@
 			.attr('stroke-width', 1.5)
 			.selectAll('g')
 			.data(nodes)
-			.join('g')
 			.join('g')
 			.call((selection) => drawShape(selection, $colorScale)) // map shape to moltype
 			.on('click', (event: any, d: { id: string }) => highlightNode(d.id, links, node, link));
@@ -143,9 +140,6 @@
 		//update positions during simulation
 		simulation.on('tick', () => {
 			nodes.forEach((d) => {
-				const cx = width / 2;
-				const cy = height / 2;
-
 				// vector from center
 				const dx = d.x - cx;
 				const dy = d.y - cy;
@@ -198,20 +192,23 @@
 				}
 			});
 
-			link.attr('d', (d: any) => {
-				let end = { x: d.target.x, y: d.target.y };
-				if (d.type === 'TFL' && $aesTFMapping === 'endShape') {
-					end = trimPath(d.source, d.target, 10);
-				}
-				const dx = d.target.x - d.source.x;
-				const dy = d.target.y - d.source.y;
-				const dr = Math.sqrt(dx * dx + dy * dy);
-				return `
+			node.attr('transform', (d: any) => `translate(${d.x}, ${d.y})`);
+
+			link
+				.attr('d', (d: any) => {
+					let end = { x: d.target.x, y: d.target.y };
+					if (d.type === 'TFL' && $aesTFMapping === 'endShape') {
+						end = trimPath(d.source, d.target, 10);
+					}
+					const dx = d.target.x - d.source.x;
+					const dy = d.target.y - d.source.y;
+					const dr = Math.sqrt(dx * dx + dy * dy) * 0.99; // adjust curvature
+					return `
 					M ${d.source.x},${d.source.y}
 					A ${dr},${dr} 0 0 1 ${end.x},${end.y}
 				`;
-			});
-			node.attr('transform', (d: any) => `translate(${d.x}, ${d.y})`);
+				})
+				.call((selection) => aesEdge(selection, $aesLRMapping, $aesTFMapping));
 		});
 		drawLegend(svgContainer, $colorScale, $aesLRMapping, $aesTFMapping);
 	}

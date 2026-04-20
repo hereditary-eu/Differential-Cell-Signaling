@@ -5,14 +5,14 @@
 		zoomBehavior,
 		width,
 		height,
-		drawShape,
+		drawNode,
 		drawLegend,
 		highlightNode,
 		aesEdge,
 		trimPath,
 		defineMarkers
 	} from './utils';
-	import { colorScale, selectedNode, aesLRMapping, aesTFMapping } from '$lib/stores';
+	import { colorScale, selectedNode, aesLRMapping, aesTFMapping, colorCT } from '$lib/stores';
 
 	export let networkData: { nodes: any[]; links: any[] };
 	let svgContainer: SVGSVGElement;
@@ -21,6 +21,8 @@
 	function renderNetwork() {
 		if (!networkData?.nodes?.length) return;
 
+		// console.log('when RENDER NETWORK NETWORK GRAPH ZOOM is called, colorCT is');
+		// console.log($colorCT);
 		const nodes = networkData.nodes.map((d) => ({ ...d }));
 		const links = networkData.links.map((d) => ({ ...d }));
 
@@ -70,7 +72,8 @@
 			.data(nodes)
 			.join('g')
 			.join('g')
-			.call((selection) => drawShape(selection, $colorScale)) // map shape to moltype
+			.call((selection) => drawNode(selection, $colorScale, $colorCT)) // map shape to moltype
+			// .call((selection) => toggleColor(selection, $aesLRMapping))
 			.on('click', (event: any, d: { id: string }) => {
 				highlightNode(d.id, links, node, link);
 				// selectedNode.set(d.id);
@@ -116,8 +119,11 @@
 	}
 
 	// Redraw when data changes
-	$: if (networkData && networkData.nodes && $aesLRMapping && $aesTFMapping) {
-		renderNetwork();
+	$: {
+		$aesLRMapping;
+		$aesTFMapping;
+		$colorCT; // add reference to subscribe the rerendering
+		if (networkData?.nodes?.length) renderNetwork();
 	}
 	onMount(() => {
 		renderNetwork();

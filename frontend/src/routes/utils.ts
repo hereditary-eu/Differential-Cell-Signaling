@@ -8,7 +8,6 @@ const initialScale = 0.3;
 const initialX = width / 3;
 const initialY = height / 3;
 
-
 export interface ZoomOptions {
     scaleExtent?: [number, number];
     wheelSensitivity?: number;
@@ -34,22 +33,25 @@ export function zoomBehavior(
     return { zoom, initialTransform };
 }
 
-
 // export function to map moltype to shape
-export function drawShape(
+export function drawNode(
     selection: d3.Selection<any, any, any, any>,
-    colorScale: d3.ScaleOrdinal<string, string, string>
+    colorScale: d3.ScaleOrdinal<string, string, string>,
+    color: boolean
 ) {
+    // console.log('FROM INSIDE drawNode utils, color value is ')
+    // console.log(color)
+    // console.log('checking condistion debug')
+    // console.log(color ? colorScale('dc true'): 'color sembra falso')
 		selection.each(function (d: any) {
 			const g = d3.select(this);
-
 			if (d.moltype === 'TF') {
-				g.append('circle').attr('r', 7).attr('fill', colorScale(d.celltype));
+				g.append('circle').attr('r', 7).attr('fill', color ? colorScale(d.celltype): '#a9a9a9');
 			} else if (d.moltype === 'ligand') {
 				const size = 80;
 				g.append('path')
 					.attr('d', d3.symbol().type(d3.symbolTriangle).size(size))
-					.attr('fill', colorScale(d.celltype));
+					.attr('fill', color ? colorScale(d.celltype): '#a9a9a9');
 			} else if (d.moltype === 'receptor') {
 				const side = 12;
 				g.append('rect')
@@ -57,13 +59,12 @@ export function drawShape(
 					.attr('y', -side / 2)
 					.attr('width', side)
 					.attr('height', side)
-					.attr('fill', colorScale(d.celltype));
+					.attr('fill', color ? colorScale(d.celltype): '#a9a9a9');
 			}
 		});
         // return selection;
         // without this, returns void! eventually add return selection for chaining
 	}
-
 
 // interpolateViridis wants values between 0 and 1 -> do minmax scale
 // TODO in the future, now assuming scSeqComm output: [-1,1]
@@ -72,7 +73,6 @@ export function aesEdge(
     aesLRMapping: 'reset' | 'viridis' | 'volcano',
     aesTFMapping: 'reset' | 'endShape'
 ) {
-
         selection.each(function (d: any) {
             const g = d3.select(this);
             g.attr('stroke', '#999'); // default color for other edges
@@ -93,15 +93,11 @@ export function aesEdge(
                 if (aesTFMapping === 'endShape') {
                     if (d.weight < 0) {
                         // blunt end
-                        g.attr('marker-end', 'url(#Tblunt)'); // not working
-                        // g.attr('stroke', '#000000'); //DEBUG
-                        // console.log('blunt end for TFL with weight <0')
+                        // console.log('Setting blunt end for TFL with weight', d.weight);
+                        g.attr('marker-end', 'url(#Tblunt)');
                     } else {
                         // arrow end
-                        // g.attr('stroke', '#FFA500'); //DEBUG
-                        g.attr('marker-end', 'url(#arrow)'); // not working
-                        // console.log('arrow end for TFL with weight >=0')
-                        
+                        g.attr('marker-end', 'url(#arrow)'); 
                     }
             }
         }

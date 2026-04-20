@@ -4,23 +4,25 @@
 	import SidebarCaseStudies from './SidebarCaseStudies.svelte';
 	import SidebarQuery from './SidebarQuery.svelte';
 	import NetworkGraphZoom from './NetworkGraphZoom.svelte';
-	import NetworkCircular from './NetworkCircular.svelte';
-	// import NetworkTree from './NetworkTree.svelte';
-	// import NewNetworkCircular from './newNetworkCircular.svelte';
+	import NetworkCircular from './NetworkCircular_interactive.svelte';
 
 	import {
 		celltypes,
 		sender,
 		receiver,
+		selectedCaseStudy,
 		selectedComparison,
 		selectedNode,
 		neighborhoodData,
 		aesLRMapping,
-		aesTFMapping
+		aesTFMapping,
+		colorCT,
+		molecules
 	} from '$lib/stores';
 	import FullNetwork from './fullNetwork.svelte';
 
 	const backend = import.meta.env.VITE_BACKEND_URL;
+
 	interface NetworkStats {
 		nNodes: number;
 		nLigands: number;
@@ -44,7 +46,7 @@
 	// change static info when case study - comparison selection changes
 	async function loadStaticInfo() {
 		try {
-			console.log('Loading static info for comparison:', $selectedComparison);
+			// console.log('Loading static info for comparison:', $selectedComparison);
 			const res = await fetch(`${backend}/api/static_info?comparison=${$selectedComparison}`);
 			static_info = await res.json();
 			if (static_info?.celltypes) {
@@ -57,14 +59,13 @@
 	}
 	async function loadFullNetwork() {
 		try {
-			console.log('Loading full network for:', $selectedComparison);
+			// console.log('Loading full network for:', $selectedComparison);
 			const res = await fetch(`${backend}/api/full_net?comparison=${$selectedComparison}`);
 			fullNet = await res.json();
 		} catch (err) {
 			console.error('Error loading full network:', err);
 		}
 	}
-
 	onMount(async () => {
 		try {
 			// Only fetch if selectedComparison is available
@@ -78,6 +79,20 @@
 		}
 	});
 
+	// let circularMounted = $state(false);
+	// function onCircularTabShown() {
+	// 	circularMounted = true;
+	// }
+	// onMount(() => {
+	// 	const handler = (e: any) => {
+	// 		console.log('tab event:', e.target);
+	// 		if (e.target?.getAttribute('href') === '#network-circular') {
+	// 			circularMounted = true;
+	// 		}
+	// 	};
+	// 	document.addEventListener('shown.bs.tab', handler);
+	// 	return () => document.removeEventListener('shown.bs.tab', handler);
+	// });
 	async function loadFilteredData(url: string) {
 		try {
 			const res = await fetch(url);
@@ -103,6 +118,19 @@
 			console.error('Error fetching neighborhood data:', err);
 		}
 	}
+	// handle molecules picking
+	// let selected: string | null = null;
+	// async function getMolNames() {
+	// 	try {
+	// 		const res = await fetch(
+	// 			`${backend}/api/molecules_names_list?comparison=${$selectedComparison}`
+	// 		);
+	// 		const data = await res.json();
+	// 		molecules.set(data);
+	// 	} catch (err) {
+	// 		console.error('Error fetching molecules names');
+	// 	}
+	// }
 </script>
 
 <div class="app">
@@ -159,6 +187,30 @@
 					</div>
 				</div>
 				<div class="accordion-item">
+					<h2 class="accordion-header" id="Search">
+						<button
+							class="accordion-button collapsed"
+							type="button"
+							data-bs-toggle="collapse"
+							data-bs-target="#collapseSearch"
+							aria-expanded="false"
+							aria-controls="collapseSearch"
+						>
+							Name Search
+						</button>
+					</h2>
+					<div
+						id="collapseSearch"
+						class="accordion-collapse collapse"
+						aria-labelledby="Search"
+						data-bs-parent="#leftSidebarAccordion"
+					>
+						<div class="accordion-body">
+							<!-- <NameSearch {molecules} /> -->
+						</div>
+					</div>
+				</div>
+				<div class="accordion-item">
 					<h2 class="accordion-header" id="Query">
 						<button
 							class="accordion-button collapsed"
@@ -186,7 +238,7 @@
 		</aside>
 		<main class="flex-grow-1 p-4" id="graph-area">
 			<!-- full net -->
-			<div class="card border-primary mb-3" style="width: 55%;">
+			<div class="card border-primary mb-3" style="width: 65%;">
 				<button
 					type="button"
 					class="btn btn-info"
@@ -198,14 +250,14 @@
 					data-bs-html="true"
 					aria-describedby="tooltipFullNet">i</button
 				>
-				<p class="card-header">Full Network</p>
+				<p class="card-header">Full Network for {$selectedCaseStudy} : {$selectedComparison}</p>
 				<FullNetwork {fullNet} />
 			</div>
 			<!-- filtered sender-receiver net -->
 			<div style="width: 100%;">
 				<div
 					class="card border-primary mb-3"
-					style="display: inline-block; vertical-align: top; width: 55%;"
+					style="display: inline-block; vertical-align: top; width: 65%;"
 				>
 					<ul class="nav nav-tabs" role="tablist">
 						<li class="nav-item" role="presentation">
@@ -237,6 +289,12 @@
 								aria-expanded="false">...</a
 							>
 							<div class="dropdown-menu" data-bs-popper="static">
+								<a class="dropdown-item" href="#drop" onclick={() => ($colorCT = !$colorCT)}
+									>CellTypes color</a
+								>
+								<!-- <input class="form-check-input dropdown-item" type="checkbox" id="colorCTcheck" />
+								<label for="colorCTcheck">Cell types color</label> -->
+								<div class="dropdown-divider"></div>
 								<a class="dropdown-item" href="#drop" onclick={() => aesLRMapping.set('viridis')}
 									>LR viridis</a
 								>
@@ -258,10 +316,14 @@
 					</ul>
 					<div id="tabContainer" class="tab-content">
 						<div class="tab-pane fade show active" id="network-zoom" role="tabpanel">
+							<!-- <NetworkCircular {networkData} /> -->
 							<NetworkGraphZoom {networkData} />
 						</div>
 						<div class="tab-pane fade" id="network-circular" role="tabpanel">
+							<!-- {#if circularMounted} -->
+							<!-- <NetworkGraphZoom {networkData} /> -->
 							<NetworkCircular {networkData} />
+							<!-- {/if} -->
 						</div>
 						<div class="tab-pane fade" id="network-linear" role="tabpanel">
 							<p style="margin: 1rem;">Linear layout coming soon...</p>

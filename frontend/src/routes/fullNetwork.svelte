@@ -2,7 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
 	import { colorScale, aesLRMapping, aesTFMapping } from '$lib/stores';
-	import { zoomBehavior, width, height, drawShape, highlightNode, drawLegend } from './utils';
+	import { zoomBehavior, width, height, drawNode, highlightNode, drawLegend } from './utils';
 
 	export let fullNet: { nodes: any[]; links: any[] };
 	let svgContainer: SVGSVGElement;
@@ -33,11 +33,12 @@
 				d3
 					.forceLink(links)
 					.id((d: any) => d.id)
-					.distance(15)
-					.strength(0.1)
+					.distance(10)
+					.strength(0.15)
 			)
-			.force('charge', d3.forceManyBody().strength(-10))
-			.force('center', d3.forceCenter(width / 2, height / 2));
+			.force('charge', d3.forceManyBody().strength(-7))
+			.force('center', d3.forceCenter(width / 2, height / 2))
+			.alphaDecay(0.02);
 
 		// draw links
 		const link = zoomLayer
@@ -58,7 +59,7 @@
 			.data(nodes)
 			.join('g')
 			.join('g')
-			.call((selection) => drawShape(selection, $colorScale)) // map shape to moltype
+			.call((selection) => drawNode(selection, $colorScale, true)) // map shape to moltype
 			.on('click', (event: any, d: { id: string }) => highlightNode(d.id, links, node, link));
 
 		drawLegend(svgContainer, $colorScale, $aesLRMapping, $aesTFMapping, 6, 7, 5, true);

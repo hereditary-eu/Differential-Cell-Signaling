@@ -455,19 +455,14 @@ def get_filtered_network(
     }
 
 @app.get('/api/molecules_names_list')
-def get_molecules_names_list():
+def get_molecules_names_list(comparison: str):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('SELECT DISTINCT name FROM nodes ORDER BY name ASC;')
-    names = [row[0] for row in cur.fetchall()]
+    cur.execute(f'SELECT DISTINCT name FROM nodes WHERE comparison = {comparison};')# ORDER BY name ASC;')
+    names = sorted(set([row[0] for row in cur.fetchall()]))
     cur.close()
     conn.close()
-    #save this just temporarily to a file for Stefan
-    # with open("molecules.txt", "w") as outfile:
-    #     outfile.write("\n".join(names))
-    # TO BE REMOVED
     return {'molecules': names}
-
 
 # @app.get('/api/filtered_data')
 # def get_filtered_network(
