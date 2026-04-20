@@ -39,10 +39,6 @@ export function drawNode(
     colorScale: d3.ScaleOrdinal<string, string, string>,
     color: boolean
 ) {
-    // console.log('FROM INSIDE drawNode utils, color value is ')
-    // console.log(color)
-    // console.log('checking condistion debug')
-    // console.log(color ? colorScale('dc true'): 'color sembra falso')
 		selection.each(function (d: any) {
 			const g = d3.select(this);
 			if (d.moltype === 'TF') {
@@ -93,7 +89,6 @@ export function aesEdge(
                 if (aesTFMapping === 'endShape') {
                     if (d.weight < 0) {
                         // blunt end
-                        // console.log('Setting blunt end for TFL with weight', d.weight);
                         g.attr('marker-end', 'url(#Tblunt)');
                     } else {
                         // arrow end
@@ -105,7 +100,7 @@ export function aesEdge(
 }
 
 
-// export function to be called when a node is clicked
+// export function to be called when a node is CLICKED (it's not related to sidebarSearch)
 export function highlightNode(selectedId: string, links: any, node: d3.Selection<any, any, any, any>, link: d3.Selection<any, any, any, any>) {
         const adjacency: Record<string, Set<string>> = {};
         links.forEach((l: any) => {

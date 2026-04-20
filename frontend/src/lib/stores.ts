@@ -20,3 +20,4 @@ export const aesLRMapping = writable<'reset' | 'viridis' | 'volcano'>('reset');
 export const aesTFMapping = writable<'reset' | 'endShape'>('reset');
 export const colorCT = writable(true);
 export const molecules = writable([]);
+export const highlightedNode = writable<string | null>(null);

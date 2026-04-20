@@ -453,16 +453,35 @@ def get_filtered_network(
         'links': links,
         'stats': stats
     }
-
 @app.get('/api/molecules_names_list')
-def get_molecules_names_list(comparison: str):
+def get_molecules_names_list(comparison: str, q: str = ''):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(f'SELECT DISTINCT name FROM nodes WHERE comparison = {comparison};')# ORDER BY name ASC;')
-    names = sorted(set([row[0] for row in cur.fetchall()]))
+    if q:
+        cur.execute(
+            """SELECT DISTINCT name, celltype, verbose_id
+               FROM nodes
+               WHERE comparison = %s AND name ILIKE %s
+               ORDER BY name ASC;""",
+            (comparison, f'%{q}%')
+        )
+    else:
+        cur.execute(
+            """SELECT DISTINCT name, celltype, verbose_id
+               FROM nodes
+               WHERE comparison = %s
+               ORDER BY name ASC;""",
+            (comparison,)
+        )
+    rows = cur.fetchall()
     cur.close()
     conn.close()
-    return {'molecules': names}
+    return {
+        'molecules': [
+            {'name': r[0], 'celltype': r[1], 'verbose_id': r[2]}
+            for r in rows
+        ]
+    }
 
 # @app.get('/api/filtered_data')
 # def get_filtered_network(

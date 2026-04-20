@@ -3,6 +3,7 @@
 	import SidebarFilter from './SidebarFilter.svelte';
 	import SidebarCaseStudies from './SidebarCaseStudies.svelte';
 	import SidebarQuery from './SidebarQuery.svelte';
+	import SidebarSearch from './SidebarSearch.svelte';
 	import NetworkGraphZoom from './NetworkGraphZoom.svelte';
 	import NetworkCircular from './NetworkCircular_interactive.svelte';
 
@@ -206,7 +207,7 @@
 						data-bs-parent="#leftSidebarAccordion"
 					>
 						<div class="accordion-body">
-							<!-- <NameSearch {molecules} /> -->
+							<SidebarSearch />
 						</div>
 					</div>
 				</div>

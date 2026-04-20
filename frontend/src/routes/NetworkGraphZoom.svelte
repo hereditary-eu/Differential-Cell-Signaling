@@ -12,17 +12,57 @@
 		trimPath,
 		defineMarkers
 	} from './utils';
-	import { colorScale, selectedNode, aesLRMapping, aesTFMapping, colorCT } from '$lib/stores';
+	import {
+		colorScale,
+		selectedNode,
+		highlightedNode,
+		aesLRMapping,
+		aesTFMapping,
+		colorCT
+	} from '$lib/stores';
 
 	export let networkData: { nodes: any[]; links: any[] };
 	let svgContainer: SVGSVGElement;
 	let simulation: d3.Simulation<any, undefined>;
 
+	//handle search-based hihlighting
+	//handle highligthing the node selected with SidebarSearch
+	let nodeSelection: any = null;
+	let linkSelection: any = null;
+
+	function applyHighlight(value: string | null) {
+		if (!nodeSelection) return;
+		if (!value) {
+			nodeSelection.attr('opacity', 1);
+			linkSelection?.attr('opacity', 1);
+			return;
+		}
+		let matchIds: Set<string>;
+
+		if (value.startsWith('name:')) {
+			// Match all nodes sharing this molecule name
+			const name = value.slice(5);
+			matchIds = new Set(
+				(networkData?.nodes ?? []).filter((n: any) => n.name === name).map((n: any) => n.id)
+			);
+		} else {
+			// Match exact verbose_id (name__celltype) → single node
+			matchIds = new Set(
+				(networkData?.nodes ?? []).filter((n: any) => n.verbose_id === value).map((n: any) => n.id)
+			);
+		}
+		nodeSelection.attr('opacity', (d: any) => (matchIds.has(d.id) ? 1 : 0.08));
+		linkSelection?.attr(
+			'opacity',
+			(d: any) => matchIds.has(d.source?.id ?? d.source) || matchIds.has(d.target?.id ?? d.target)
+		)
+			? 0.7
+			: 0.04;
+	}
+
 	function renderNetwork() {
 		if (!networkData?.nodes?.length) return;
 
-		// console.log('when RENDER NETWORK NETWORK GRAPH ZOOM is called, colorCT is');
-		// console.log($colorCT);
 		const nodes = networkData.nodes.map((d) => ({ ...d }));
 		const links = networkData.links.map((d) => ({ ...d }));
 
@@ -73,11 +113,13 @@
 			.join('g')
 			.join('g')
 			.call((selection) => drawNode(selection, $colorScale, $colorCT)) // map shape to moltype
-			// .call((selection) => toggleColor(selection, $aesLRMapping))
 			.on('click', (event: any, d: { id: string }) => {
 				highlightNode(d.id, links, node, link);
 				// selectedNode.set(d.id);
 			});
+
+		nodeSelection = node;
+		linkSelection = link;
 
 		//reset when clicking on empty space
 		svg.on('click', (event) => {
@@ -116,7 +158,10 @@
 			node.attr('transform', (d: any) => `translate(${d.x}, ${d.y})`);
 		});
 		drawLegend(svgContainer, $colorScale, $aesLRMapping, $aesTFMapping);
-	}
+
+		// apply highlight after re-render
+		applyHighlight($highlightedNode);
+	} //end of renderNetwork()
 
 	// Redraw when data changes
 	$: {
@@ -125,6 +170,9 @@
 		$colorCT; // add reference to subscribe the rerendering
 		if (networkData?.nodes?.length) renderNetwork();
 	}
+
+	$: applyHighlight($highlightedNode);
+
 	onMount(() => {
 		renderNetwork();
 	});
