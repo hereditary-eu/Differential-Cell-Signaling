@@ -10,7 +10,8 @@
 		highlightNode,
 		aesEdge,
 		trimPath,
-		defineMarkers
+		defineMarkers,
+		applyHighlightSearch
 	} from './utils';
 	import {
 		colorScale,
@@ -30,38 +31,9 @@
 	let nodeSelection: any = null;
 	let linkSelection: any = null;
 
-	function applyHighlight(value: string | null) {
-		if (!nodeSelection) return;
-		if (!value) {
-			nodeSelection.attr('opacity', 1);
-			linkSelection?.attr('opacity', 1);
-			return;
-		}
-		let matchIds: Set<string>;
-
-		if (value.startsWith('name:')) {
-			// Match all nodes sharing this molecule name
-			const name = value.slice(5);
-			matchIds = new Set(
-				(networkData?.nodes ?? []).filter((n: any) => n.name === name).map((n: any) => n.id)
-			);
-		} else {
-			// Match exact verbose_id (name__celltype) → single node
-			matchIds = new Set(
-				(networkData?.nodes ?? []).filter((n: any) => n.verbose_id === value).map((n: any) => n.id)
-			);
-		}
-		nodeSelection.attr('opacity', (d: any) => (matchIds.has(d.id) ? 1 : 0.08));
-		linkSelection?.attr(
-			'opacity',
-			(d: any) => matchIds.has(d.source?.id ?? d.source) || matchIds.has(d.target?.id ?? d.target)
-		)
-			? 0.7
-			: 0.04;
-	}
-
 	function renderNetwork() {
 		if (!networkData?.nodes?.length) return;
+		simulation?.stop();
 
 		const nodes = networkData.nodes.map((d) => ({ ...d }));
 		const links = networkData.links.map((d) => ({ ...d }));
@@ -160,7 +132,7 @@
 		drawLegend(svgContainer, $colorScale, $aesLRMapping, $aesTFMapping);
 
 		// apply highlight after re-render
-		applyHighlight($highlightedNode);
+		applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
 	} //end of renderNetwork()
 
 	// Redraw when data changes
@@ -171,7 +143,7 @@
 		if (networkData?.nodes?.length) renderNetwork();
 	}
 
-	$: applyHighlight($highlightedNode);
+	$: applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
 
 	onMount(() => {
 		renderNetwork();

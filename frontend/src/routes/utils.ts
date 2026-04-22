@@ -2,8 +2,8 @@
 import * as d3 from 'd3';
 
 // export variables and function to define dimension of plot, zoom behavior and initial position with initial zoom level
-export const width = 350;
-export const height = 250;
+export const width = 250;
+export const height = 200;
 const initialScale = 0.3;
 const initialX = width / 3;
 const initialY = height / 3;
@@ -313,3 +313,35 @@ export function defineMarkers(
 			.attr('stroke', '#999')
 			.attr('stroke-width', 2);
     }
+
+//this is the highlight called when node is searched by SidebarSearch
+export function applyHighlightSearch(value: string | null, nodeSelection: any, linkSelection: any, networkData: any) {
+		if (!nodeSelection) return;
+		if (!value) {
+			nodeSelection.attr('opacity', 1);
+			linkSelection?.attr('opacity', 1);
+			return;
+		}
+		let matchIds: Set<string>;
+
+		if (value.startsWith('name:')) {
+			// Match all nodes sharing this molecule name
+			const name = value.slice(5);
+			matchIds = new Set(
+				(networkData?.nodes ?? []).filter((n: any) => n.name === name).map((n: any) => n.id)
+			);
+		} else {
+			// Match exact verbose_id (name__celltype) → single node
+			matchIds = new Set(
+				(networkData?.nodes ?? []).filter((n: any) => n.verbose_id === value).map((n: any) => n.id)
+			);
+		}
+		nodeSelection.attr('opacity', (d: any) => (matchIds.has(d.id) ? 1 : 0.15));
+		// linkSelection?.attr(
+		// 	'opacity',
+		// 	(d: any) => matchIds.has(d.source?.id ?? d.source) || matchIds.has(d.target?.id ?? d.target)
+		// )
+		// 	? 0.7
+		// 	: 0.04;
+		linkSelection?.attr('opacity', 0.15);
+	}

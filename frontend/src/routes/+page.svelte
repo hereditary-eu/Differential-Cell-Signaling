@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import SidebarFilter from './SidebarFilter.svelte';
 	import SidebarCaseStudies from './SidebarCaseStudies.svelte';
 	import SidebarQuery from './SidebarQuery.svelte';
 	import SidebarSearch from './SidebarSearch.svelte';
 	import NetworkGraphZoom from './NetworkGraphZoom.svelte';
-	import NetworkCircular from './NetworkCircular_interactive.svelte';
+	import NetworkCircular from './NetworkCircular.svelte';
+	import FullNetwork from './NetworkFull.svelte';
 
 	import {
 		celltypes,
@@ -20,7 +20,6 @@
 		colorCT,
 		molecules
 	} from '$lib/stores';
-	import FullNetwork from './fullNetwork.svelte';
 
 	const backend = import.meta.env.VITE_BACKEND_URL;
 
@@ -60,40 +59,22 @@
 	}
 	async function loadFullNetwork() {
 		try {
-			// console.log('Loading full network for:', $selectedComparison);
+			const statusRes = await fetch(
+				`${backend}/api/centrality_status?comparison=${$selectedComparison}`
+			);
+			const { computed } = await statusRes.json();
+			if (!computed) {
+				await fetch(`${backend}/api/precompute?comparison=${$selectedComparison}`, {
+					method: 'POST'
+				});
+			}
 			const res = await fetch(`${backend}/api/full_net?comparison=${$selectedComparison}`);
 			fullNet = await res.json();
 		} catch (err) {
 			console.error('Error loading full network:', err);
 		}
 	}
-	onMount(async () => {
-		try {
-			// Only fetch if selectedComparison is available
-			if ($selectedComparison) {
-				// fetch full network data
-				const fullNetRes = await fetch(`${backend}/api/full_net?comparison=${$selectedComparison}`);
-				fullNet = await fullNetRes.json();
-			}
-		} catch (err) {
-			console.error('Error in onMount:', err);
-		}
-	});
 
-	// let circularMounted = $state(false);
-	// function onCircularTabShown() {
-	// 	circularMounted = true;
-	// }
-	// onMount(() => {
-	// 	const handler = (e: any) => {
-	// 		console.log('tab event:', e.target);
-	// 		if (e.target?.getAttribute('href') === '#network-circular') {
-	// 			circularMounted = true;
-	// 		}
-	// 	};
-	// 	document.addEventListener('shown.bs.tab', handler);
-	// 	return () => document.removeEventListener('shown.bs.tab', handler);
-	// });
 	async function loadFilteredData(url: string) {
 		try {
 			const res = await fetch(url);
@@ -109,6 +90,7 @@
 		}
 	});
 	async function fetchNeighborhood(nodeId: string) {
+		if (!$sender || !$receiver) return;
 		try {
 			const res = await fetch(
 				`${backend}/api/neighborhood?comparison=${$selectedComparison}&sender=${$sender}&receiver=${$receiver}&node_id=${nodeId}`
@@ -119,19 +101,6 @@
 			console.error('Error fetching neighborhood data:', err);
 		}
 	}
-	// handle molecules picking
-	// let selected: string | null = null;
-	// async function getMolNames() {
-	// 	try {
-	// 		const res = await fetch(
-	// 			`${backend}/api/molecules_names_list?comparison=${$selectedComparison}`
-	// 		);
-	// 		const data = await res.json();
-	// 		molecules.set(data);
-	// 	} catch (err) {
-	// 		console.error('Error fetching molecules names');
-	// 	}
-	// }
 </script>
 
 <div class="app">
@@ -240,7 +209,7 @@
 		<main class="flex-grow-1 p-4" id="graph-area">
 			<!-- full net -->
 			<div class="card border-primary mb-3" style="width: 65%;">
-				<button
+				<!-- <button
 					type="button"
 					class="btn btn-info"
 					style="position: absolute; right: 0.7rem; top: 0.7rem; width: 1rem; height: 1rem; padding: 0;"
@@ -250,15 +219,15 @@
 						.stats.nNodes}, #links: {fullNet.stats.nLinks}.`}
 					data-bs-html="true"
 					aria-describedby="tooltipFullNet">i</button
-				>
+				> -->
 				<p class="card-header">Full Network for {$selectedCaseStudy} : {$selectedComparison}</p>
 				<FullNetwork {fullNet} />
 			</div>
 			<!-- filtered sender-receiver net -->
-			<div style="width: 100%;">
+			<div style="width: 100%; ">
 				<div
 					class="card border-primary mb-3"
-					style="display: inline-block; vertical-align: top; width: 65%;"
+					style="display: inline-block; vertical-align: top; width: 65%; "
 				>
 					<ul class="nav nav-tabs" role="tablist">
 						<li class="nav-item" role="presentation">
@@ -277,9 +246,9 @@
 						<li class="nav-item" role="presentation">
 							<a class="nav-link" data-bs-toggle="tab" href="#network-hive" role="tab">Hive</a>
 						</li>
-						<li class="nav-item" role="presentation">
+						<!-- <li class="nav-item" role="presentation">
 							<a class="nav-link" data-bs-toggle="tab" href="#network-tree" role="tab">Tree</a>
-						</li>
+						</li> -->
 						<li class="nav-item dropdown">
 							<a
 								class="nav-link dropdown-toggle show"
@@ -333,9 +302,6 @@
 							<p style="margin: 1rem;">Hive layout coming soon...</p>
 							<!-- <NewNetworkCircular {networkData} /> -->
 							<!-- great failure the new NetworkCircular -->
-						</div>
-						<div class="tab-pane fade" id="network-tree" role="tabpanel">
-							<p style="margin: 1rem;">Tree layout coming soon...</p>
 						</div>
 					</div>
 					<!-- <div style="width: 1000px; height: 300px;"> -->

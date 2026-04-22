@@ -9,7 +9,7 @@
 	let debounceTimer: ReturnType<typeof setTimeout>; //avoid reacting continuously to user typing, a bit of patience :)
 
 	async function fetchSuggestions(q: string) {
-		if (q.length < 2) {
+		if (q.length < 1) {
 			suggestions = [];
 			open = false;
 			return;
