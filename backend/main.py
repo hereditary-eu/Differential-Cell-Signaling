@@ -4,8 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import psycopg2
 import psycopg2.extras
 from typing import Literal
-# from collections import defaultdict
+import statistics
 import networkx as nx
+from collections import Counter
 
 app = FastAPI()
 
@@ -19,7 +20,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
-
 
 def get_db_connection():
     return psycopg2.connect(
@@ -208,105 +208,124 @@ def find_cycles(comparison: str):
     print('finished cycles computation!')
     return {"cycles": filtered_cycles}
 
-#recursion limit exceeded
-    # rec_stack = []
-    # def dfs(node):
-    #     visited.add(node)
-    #     rec_stack.append(node)
-    #     for neighbor in graph[node]:
-    #         if neighbor not in visited:
-    #             dfs(neighbor)
-    #         elif neighbor in rec_stack:
-    #             cycle_start_index = rec_stack.index(neighbor)
-    #             cycle = rec_stack[cycle_start_index:] + [neighbor]
-    #             # Ignore 2/3-length cycles
-    #             if len(cycle) > 3:
-    #                 cycles.append(cycle)
-    #     rec_stack.pop()
+def precompute(comparison: str):
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    
+    cur.execute('SELECT id FROM nodes WHERE comparison = %s;', (comparison,))
+    nodes = cur.fetchall()
+    cur.execute(
+        'SELECT source, target, type FROM links WHERE (significance < 0.05 OR significance IS NULL) AND comparison = %s;',
+        (comparison,)
+    )
+    links = cur.fetchall()
+    if links:
+        connected_ids = {l['source'] for l in links} | {l['target'] for l in links}
+        nodes = [n for n in nodes if n['id'] in connected_ids]
+    else:
+        nodes = []
+    
+    G = nx.DiGraph()
+    G.add_nodes_from(n['id'] for n in nodes)
+    G.add_edges_from((l['source'], l['target']) for l in links)
+    # k=min(n,200) approximation for large graphs
+    n_nodes = G.number_of_nodes()
+    k = min(n_nodes, 500) if n_nodes > 500 else None
+    betweenness = nx.betweenness_centrality(G, k=k, normalized=True)
+    values = list(betweenness.values())
+    if len(values) >= 4:
+        q1 = statistics.quantiles(values, n=4)[0]
+        q3 = statistics.quantiles(values, n=4)[2]
+        b_threshold = q3 + 1.5 * (q3 - q1)
+    else:
+        b_threshold = float('inf')
 
-    # for node in nodes:
-    #     if node not in visited:
-    #         dfs(node)
+    pagerank = nx.pagerank(G, max_iter=100)
+    values = list(pagerank.values())
+    if len(values) >= 4:
+        q1 = statistics.quantiles(values, n=4)[0]
+        q3 = statistics.quantiles(values, n=4)[2]
+        p_threshold = q3 + 1.5 * (q3 - q1)
+    else:
+        p_threshold = float('inf')
+    
+    cur2 = conn.cursor()
+    for node_id, b in betweenness.items():
+        p = pagerank.get(node_id, 0.0)
+        cur2.execute(
+            """UPDATE nodes SET betweenness = %s, pagerank = %s, is_outlier_b = %s, is_outlier_p = %s
+               WHERE id = %s""",
+            (b, p, bool(b > b_threshold), bool(p > p_threshold), node_id)
+        )
+    conn.commit()
+    cur2.close()
+    cur.close()
+    conn.close()
+    print(f"Done. Beteweenness outlier threshold: {b_threshold:.4f}, Pagerank outlier threshold: {p_threshold:.4f}")
 
+@app.get('/api/centrality_status')
+def centrality_status(comparison: str):
+    """Check if centrality has already been computed for this comparison."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        ALTER TABLE nodes
+        ADD COLUMN IF NOT EXISTS betweenness FLOAT,
+        ADD COLUMN IF NOT EXISTS pagerank FLOAT,
+        ADD COLUMN IF NOT EXISTS is_outlier_b BOOLEAN,
+        ADD COLUMN IF NOT EXISTS is_outlier_p BOOLEAN;
+    """)
+    conn.commit()
+    cur.execute(
+        "SELECT EXISTS(SELECT 1 FROM nodes WHERE comparison = %s AND betweenness IS NOT NULL);",
+        (comparison,)
+    )
+    computed = cur.fetchone()[0]
+    cur.close()
+    conn.close()
+    return {'computed': computed}
 
-# import networkx as nx
-
-# @app.get("/api/cycles")
-# def find_cycles_api(case_study: str, comparison: str):
-
-#     conn = get_db_connection()
-#     cur = conn.cursor()
-
-#     cur.execute("""
-#         SELECT source, target
-#         FROM links
-#         WHERE case_study = %s AND comparison = %s
-#     """, (case_study, comparison))
-
-#     edges = cur.fetchall()
-#     cur.close()
-#     conn.close()
-
-#     G = nx.DiGraph()
-#     G.add_edges_from(edges)
-
-#     cycles = list(nx.simple_cycles(G))
-
-#     return {"cycles": cycles}
-
+@app.post('/api/precompute')
+def precompute_centrality_endpoint(comparison: str):
+    precompute(comparison)
+    return {'status': 'done'}
 
 @app.get('/api/full_net')
 def get_full_network(comparison: str):
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
     cur.execute('SELECT * FROM nodes WHERE comparison = %s;', (comparison,))
     nodes = cur.fetchall()
-
     #filter links by significance, OTHERWISE laptop runs out of memory (and non-significant LRs are useless)
     cur.execute('SELECT * FROM links WHERE (significance < 0.05 OR significance IS NULL) AND comparison = %s;', (comparison,))
     links = cur.fetchall()
+    cur.close()
+    conn.close()
     #remove nodes that do NOT appear in any link
     if links:
         connected_ids = {l['source'] for l in links} | {l['target'] for l in links}
-        filtered_nodes = [n for n in nodes if n['id'] in connected_ids]
+        nodes = [n for n in nodes if n['id'] in connected_ids]
     else:
-        filtered_nodes = []
-    
-    stats = {
-        'nNodes': len(filtered_nodes),
-        'nLigands': 0,
-        'nReceptors': 0,
-        'nTFs': 0,
-        'nLinks': len(links),
-        'nLRLinks': 0,
-        'nTFLLinks': 0,
-        'nRTFLinks': 0,
-        'unexpectedNodes': 0,
-        'unexpectedLinks': 0
-    }
-    for n in filtered_nodes:
-        if n['moltype'] == "ligand":
-            stats['nLigands'] += 1
-        elif n['moltype'] == "receptor":
-            stats['nReceptors'] += 1
-        elif n['moltype'] == "TF":
-            stats['nTFs'] += 1
-        else:
-            stats['unexpectedNodes'] += 1
-    for l in links:
-        if l['type'] == "LR":
-            stats['nLRLinks'] += 1
-        elif l['type'] == "TFL":
-            stats['nTFLLinks'] += 1
-        elif l['type'] == "RTF":
-            stats['nRTFLinks'] += 1
-        else:
-            stats['unexpectedLinks'] += 1
-
-    cur.close()
-    conn.close()
-    return {'nodes': filtered_nodes, 'links': links, 'stats': stats}
+        nodes = []
+    moltype_counts = Counter(n['moltype'] for n in nodes)
+    link_type_counts = Counter(l['type'] for l in links)
+    b_outlier_threshold = min((n['betweenness'] for n in nodes if n['is_outlier_b']), default=0)
+    p_outlier_threshold = min((n['pagerank'] for n in nodes if n['is_outlier_p']), default=0)
+    return {'nodes': nodes, 
+            'links': links, 
+            'stats': {
+                'nNodes': len(nodes),
+                'nLigands': moltype_counts.get('ligand', 0),
+                'nReceptors': moltype_counts.get('receptor', 0),
+                'nTFs': moltype_counts.get('TF', 0),
+                'nLinks': len(links),
+                'nLRLinks': link_type_counts.get('LR', 0),
+                'nTFLLinks': link_type_counts.get('TFL', 0),
+                'nRTFLinks': link_type_counts.get('RTF', 0),
+                'b_outlierThreshold': b_outlier_threshold,
+                'p_outlierThreshold': p_outlier_threshold
+            }
+        }
 
 @app.get('/api/filtered_data')
 def get_filtered_network(
@@ -482,114 +501,3 @@ def get_molecules_names_list(comparison: str, q: str = ''):
             for r in rows
         ]
     }
-
-# @app.get('/api/filtered_data')
-# def get_filtered_network(
-#     sender: str = None,
-#     receiver: str = None,
-#     filter_intrascore: bool = False,
-#     filter_pv: bool = False,
-#     filter_inter: bool = False,
-#     min_intrascore: float = 0.0,
-#     max_intrascore: float = 1.0,
-#     pv_thresh: float = 0.05,
-#     inter_dir: Literal['up', 'down'] = 'up'
-# ):
-#     conn = get_db_connection()
-#     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-#     query_nodes = "SELECT * FROM nodes WHERE (celltype = %s OR celltype = %s) "
-#     params = [sender, receiver]
-
-#     if filter_intrascore:
-#         query_nodes += "AND ( (intrascore BETWEEN %s AND %s) OR intrascore IS NULL ) "
-#         params.extend([min_intrascore, max_intrascore])
-#     query_nodes += ";"
-
-#     cur.execute(query_nodes, params)
-#     nodes = cur.fetchall()
-#     valid_ids = [n['id'] for n in nodes]
-
-#     query_links = "SELECT * FROM links WHERE 1=1 "
-#     params = []
-#     if valid_ids:
-#         query_links += "AND (source = ANY(%s) AND target = ANY(%s)) "
-#         params.extend([valid_ids, valid_ids])
-#     if filter_pv:
-#         query_links += "AND ( (significance < %s) OR significance IS NULL ) "
-#         params.append(pv_thresh)
-#     if filter_inter:
-#         if inter_dir == 'up':
-#             query_links += 'AND ( (weight > 0) OR weight IS NULL ) '
-#         else:
-#             query_links += 'AND ( (weight < 0) OR weight IS NULL ) '
-#     query_links += ';'
-#     cur.execute(query_links, params)
-#     links = cur.fetchall()
-
-#     cur.close()
-#     conn.close()
-#     return {'nodes': nodes, 'links': links}
-
-
-# @app.get('/api/stats')
-# def get_stats(filtered_data_url: str):
-#     """ Return basic stats about the database """
-#     conn = get_db_connection(filtered_data_url)
-#     cur = conn.cursor()
-#     stats = {}
-
-#     cur.execute('SELECT COUNT(*) FROM nodes;')
-#     stats['nNodes'] = cur.fetchone()[0]
-#     cur.execute("SELECT COUNT(*) FROM nodes WHERE moltype = 'ligand';")
-#     stats['nLigands'] = cur.fetchone()[0]
-#     cur.execute("SELECT COUNT(*) FROM nodes WHERE moltype = 'receptor';")
-#     stats['nReceptors'] = cur.fetchone()[0]
-#     cur.execute("SELECT COUNT(*) FROM nodes WHERE moltype = 'TF';")
-#     stats['nTFs'] = cur.fetchone()[0]
-#     cur.execute('SELECT COUNT(*) FROM links;')
-#     stats['nLinks'] = cur.fetchone()[0]
-#     cur.execute('SELECT COUNT(*) FROM links;')
-#     stats['nLinks'] = cur.fetchone()[0]
-    
-#     cur.execute("SELECT COUNT(*) FROM links WHERE type = 'LR';")
-#     stats['nLRLinks'] = cur.fetchone()[0]
-#     cur.execute("SELECT COUNT(*) FROM links WHERE type = 'TFL';")
-#     stats['nTFLLinks'] = cur.fetchone()[0]
-#     cur.execute("SELECT COUNT(*) FROM links WHERE type = 'RTF';")
-#     stats['nRTFLinks'] = cur.fetchone()[0]
-    
-#     cur.close()
-#     conn.close()
-
-#     return stats
-
-
-# @app.get('/api/celltypes/{celltype}')
-# def get_nodes_by_celltype(celltype: str):
-#     """ return rows from nodes table matching selected cell type """
-#     conn = get_db_connection()
-#     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-#     cur.execute(f"SELECT * FROM nodes WHERE celltype = '{celltype}';")
-#     rows = cur.fetchall()
-#     cur.close()
-#     conn.close()
-
-#     if not rows:
-#         raise HTTPException(status_code=404, detail=f"No entries found for cell type {celltype}")
-
-#     #convert to list of dicts for JSON serialization
-#     result = [dict(row) for row in rows]
-#     return {'celltype': celltype, 'nodes': result}
-
-
-# Example endpoint to fetch data from the database
-# @app.get('/api/data')
-# def get_nodes():
-#     conn = get_db_connection()
-#     cur = conn.cursor()
-#     cur.execute('SELECT nodes FROM information_schema.tables WHERE table_schema="public";')
-#     tables = cur.fetchall()
-#     cur.close()
-#     conn.close()
-#     return {'tables': [t[0] for t in tables]}
