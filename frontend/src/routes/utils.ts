@@ -78,12 +78,12 @@ export function aesEdge(
                     g.attr('stroke', d3.interpolateViridis(norm_weight));
                 } else if (aesLRMapping === 'volcano') {
                     if (d.weight < 0) {
-                        g.attr('stroke', '#1E90FF'); // blue for under-activation
+                        g.attr('stroke', '#2166ac'); // blue for under-activation
                     } else {
-                        g.attr('stroke', '#720000'); //'#8B0000'); // darkred for over-activation
+                        g.attr('stroke', '#b2182b'); //'#8B0000'); // darkred for over-activation
                     }
                 }
-                g.attr('stroke-opacity', 0.8);
+                g.attr('stroke-opacity', 1);
                 
             } else if (d.type === 'TFL') {
                 if (aesTFMapping === 'endShape') {
@@ -131,7 +131,7 @@ export function drawLegend(
     aesTFMapping: 'reset' | 'endShape',
     symbolSize: number = 6,
     spacing: number = 7,
-    fontSize: number = 5,
+    fontSize: number = 4,
     full_net: boolean = false
 ) {
     // cell type legend
@@ -205,10 +205,10 @@ export function drawLegend(
             const lrLegend = d3.select(svg).append("g").attr("class", "legend").attr("transform", `translate(5, ${offsetY})`);
             lrLegend.append("text")
             .style("font-size", `${fontSize + 1}px`)
-            .text("Ligand-Receptor:");
+            .text("LR diff.:");
             const data = [
-            { label: "Over-activation", color: aesLRMapping === 'volcano' ? "#720000" : d3.interpolateViridis(1) },
-            { label: "Under-activation", color: aesLRMapping === 'volcano' ? "#1E90FF" : d3.interpolateViridis(0) }
+            { label: "Up", color: aesLRMapping === 'volcano' ? "#b2182b" : d3.interpolateViridis(1) },
+            { label: "Down", color: aesLRMapping === 'volcano' ? "#2166ac" : d3.interpolateViridis(0) }
             ];
             const group = lrLegend
             .selectAll("g.lr-item")

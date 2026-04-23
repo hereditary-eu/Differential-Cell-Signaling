@@ -32,7 +32,7 @@
 		sizeScale: d3.ScalePower<number, number>,
 		threshold?: number
 	) {
-		const g = svg.append('g').attr('transform', `translate(14, -80)`);
+		const g = svg.append('g').attr('transform', `translate(14, -50)`);
 
 		// title
 		g.append('text')
@@ -51,7 +51,7 @@
 			.attr('dominant-baseline', 'middle')
 			.attr('font-size', '10px')
 			.attr('fill', '#555')
-			.text(threshold != null ? `outlier (> ${threshold.toFixed(4)})` : 'outlier');
+			.text(threshold != null ? `Outlier (> ${threshold.toFixed(4)})` : 'outlier');
 
 		// size legend
 		const domain = sizeScale.domain();

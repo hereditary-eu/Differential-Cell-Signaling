@@ -86,6 +86,7 @@
 	}
 
 	const renderNetwork = () => {
+		console.log('render network called from circular');
 		if (!svgContainer) return;
 		if (!networkData?.nodes?.length) return;
 		simulation?.stop();
@@ -143,7 +144,8 @@
 				.attr('cy', cy())
 				.attr('fill', 'none')
 				.attr('stroke', '#ababab')
-				.attr('stroke-dasharray', '4 2')
+				.attr('stroke-dasharray', '4 4')
+				.attr('stroke-width', 2)
 				.attr('r', (i) => ringRadii[i]);
 		}
 		syncCircles();
@@ -158,12 +160,17 @@
 					.strength(0.1)
 			)
 			.force('charge', d3.forceManyBody().strength(-23))
+			.force(
+				'collide',
+				d3.forceCollide((d: any) => 14)
+			)
 			.force('center', d3.forceCenter(cx(), cy()));
 
 		const link = zoomLayer
 			.append('g')
 			.attr('fill', 'none')
-			.attr('stroke-opacity', 0.6)
+			.attr('stroke-opacity', 0.9)
+			.attr('stroke-width', 1.5)
 			.selectAll('path')
 			.data(links)
 			.join('path');
@@ -333,7 +340,7 @@
 			.attr('cx', rotX)
 			.attr('cy', rotY)
 			.attr('fill', '#fff')
-			.attr('fill-opacity', 0.5)
+			.attr('fill-opacity', 0.9)
 			.attr('stroke', '#a9a9a9')
 			.attr('stroke-width', 1.5)
 			.attr('cursor', 'crosshair');

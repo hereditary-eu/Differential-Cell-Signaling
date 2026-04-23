@@ -63,13 +63,18 @@
 					.strength(0.1)
 			)
 			.force('charge', d3.forceManyBody().strength(-10))
+			.force(
+				'collide',
+				d3.forceCollide((d: any) => 8)
+			)
 			.force('center', d3.forceCenter(width / 2, height / 2));
 
 		// draw links
 		const link = zoomLayer
 			.append('g')
 			.attr('fill', 'none') // without this the area of the arc gets colored
-			.attr('stroke-opacity', 0.6)
+			.attr('stroke-opacity', 0.9)
+			.attr('stroke-width', 1.5)
 			.selectAll('path')
 			.data(links)
 			.join('path')

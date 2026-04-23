@@ -228,9 +228,10 @@ def precompute(comparison: str):
     G = nx.DiGraph()
     G.add_nodes_from(n['id'] for n in nodes)
     G.add_edges_from((l['source'], l['target']) for l in links)
+    G.add_edges_from((l['target'], l['source']) for l in links if l['type'] == 'LR') #make LRs undirected
     # k=min(n,200) approximation for large graphs
     n_nodes = G.number_of_nodes()
-    k = min(n_nodes, 500) if n_nodes > 500 else None
+    k = min(n_nodes, 300) if n_nodes > 300 else None
     betweenness = nx.betweenness_centrality(G, k=k, normalized=True)
     values = list(betweenness.values())
     if len(values) >= 4:

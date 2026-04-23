@@ -105,7 +105,7 @@
 
 <div class="app">
 	<div class="d-flex">
-		<aside class="bg-light border-end" style="width: 25%;">
+		<aside class="bg-light border-end" style="width: 20%;">
 			<div class="accordion" id="leftSidebarAccordion">
 				<div class="accordion-item">
 					<h2 class="accordion-header" id="CaseStudies">
@@ -240,9 +240,9 @@
 								>Concentric Circular</a
 							>
 						</li>
-						<li class="nav-item" role="presentation">
+						<!-- <li class="nav-item" role="presentation">
 							<a class="nav-link" data-bs-toggle="tab" href="#network-linear" role="tab">Linear</a>
-						</li>
+						</li> -->
 						<li class="nav-item" role="presentation">
 							<a class="nav-link" data-bs-toggle="tab" href="#network-hive" role="tab">Hive</a>
 						</li>
@@ -295,9 +295,9 @@
 							<NetworkCircular {networkData} />
 							<!-- {/if} -->
 						</div>
-						<div class="tab-pane fade" id="network-linear" role="tabpanel">
+						<!-- <div class="tab-pane fade" id="network-linear" role="tabpanel">
 							<p style="margin: 1rem;">Linear layout coming soon...</p>
-						</div>
+						</div> -->
 						<div class="tab-pane fade" id="network-hive" role="tabpanel">
 							<p style="margin: 1rem;">Hive layout coming soon...</p>
 							<!-- <NewNetworkCircular {networkData} /> -->
