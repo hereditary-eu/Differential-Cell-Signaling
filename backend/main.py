@@ -318,6 +318,10 @@ def get_full_network(comparison: str):
     lr_sender_totals = {s: sum(lr_counts.get((s, r), 0) for r in celltypes) for s in celltypes}
     lr_receiver_totals = {r: sum(lr_counts.get((s, r), 0) for s in celltypes) for r in celltypes}
 
+    b_topMols = [n['name'] for n in sorted(nodes, key=lambda n: (n['betweenness']or 0 ), reverse=True)]
+    b_topMols = list(dict.fromkeys(b_topMols))[:5] #keep order but remove duplicates 
+    p_topMols = list(dict.fromkeys([n['name'] for n in sorted(nodes, key=lambda n: (n['pagerank'] or 0), reverse=True)]))[:5]
+
     return {'nodes': nodes, 
             'links': links, 
             'stats': {
@@ -330,7 +334,9 @@ def get_full_network(comparison: str):
                 'nTFLLinks': link_type_counts.get('TFL', 0),
                 'nRTFLinks': link_type_counts.get('RTF', 0),
                 'b_outlierThreshold': b_outlier_threshold,
-                'p_outlierThreshold': p_outlier_threshold
+                'p_outlierThreshold': p_outlier_threshold,
+                'b_topMols': b_topMols,
+                'p_topMols': p_topMols
             },
             'total_nodes' : total_nodes,
             'total_links' : total_links,

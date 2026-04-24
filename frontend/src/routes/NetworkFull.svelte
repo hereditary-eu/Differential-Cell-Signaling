@@ -2,7 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
 
-	export let fullNet: { nodes: any[]; links: any[]; stats?: any };
+	export let fullNet: { nodes: any[]; links: any[]; stats?: any; };
 
 	let svgEl: SVGSVGElement;
 	let simulation: d3.Simulation<any, undefined>;
@@ -26,19 +26,25 @@
 			? fullNet.stats.b_outlierThreshold
 			: fullNet.stats.p_outlierThreshold;
 	}
-
+	function getTopMols(key : 'betweenness' | 'pagerank') {
+		if (!fullNet?.stats) return undefined;
+		return key === 'betweenness'
+			? fullNet.stats.b_topMols
+			: fullNet.stats.p_topMols;
+	}
 	function drawLegendAndViolin(
 		svg: d3.Selection<SVGSVGElement, unknown, null, undefined>,
 		sizeScale: d3.ScalePower<number, number>,
-		threshold?: number
+		threshold: number,
+		topMols: string[]
 	) {
-		const g = svg.append('g').attr('transform', `translate(14, -50)`);
+		const g = svg.append('g').attr('transform', `translate(14, -100)`);
 
 		// title
 		g.append('text')
 			.attr('x', 0)
 			.attr('y', 0)
-			.attr('font-size', '12px')
+			.attr('font-size', '14px')
 			.attr('font-weight', 500)
 			.attr('fill', '#666')
 			.text(metric === 'betweenness' ? 'Betweenness' : 'PageRank');
@@ -49,7 +55,7 @@
 			.attr('x', 16)
 			.attr('y', 20)
 			.attr('dominant-baseline', 'middle')
-			.attr('font-size', '10px')
+			.attr('font-size', '12px')
 			.attr('fill', '#555')
 			.text(threshold != null ? `Outlier (> ${threshold.toFixed(4)})` : 'outlier');
 
@@ -69,7 +75,7 @@
 				.attr('x', x)
 				.attr('y', 80)
 				.attr('text-anchor', 'middle')
-				.attr('font-size', '9px')
+				.attr('font-size', '12px')
 				.attr('fill', '#777')
 				.text(['Low', 'Mid', 'High'][i]);
 		});
@@ -169,13 +175,27 @@
 
 		// y-axis (right side of violin)
 		const axis = d3.axisRight(yScale).ticks(4).tickFormat(d3.format('.2~e'));
+		
+		const rowH = 16, rowGap = 6;
+		g.append('text')
+			.text('Top 5 Molecules:')
+			.attr('y', violinH + VPAD_TOP + VPAD_BOT * 7);
+		const rows = g.selectAll('.mol-row')
+			.data(topMols).join('g')
+			.attr('class', 'mol-row')
+			.attr('transform', (d, i) => `translate(0, ${violinH + VPAD_TOP + VPAD_BOT * 7 + 18 + i * (rowH + rowGap)})`);
+		rows.append('text')
+			.attr('y', rowH /2)
+			.text((d, i ) => ` ${i+1}. ${d}`);
+
 		g.append('g')
 			.attr('transform', `translate(${cx + halfW - 14}, 0)`)
 			.call(axis)
 			.call((ax) => {
-				ax.selectAll('text').attr('font-size', '8px').attr('fill', '#888');
+				ax.selectAll('text').attr('font-size', '12px').attr('fill', '#888');
 				ax.selectAll('line,path').attr('stroke', '#ccc');
 			});
+		
 	}
 
 	function render() {
@@ -186,6 +206,7 @@
 		const links = fullNet.links.map((d) => ({ ...d }));
 		const sizeScale = buildSizeScale(nodes, metric);
 		const threshold = getThreshold(metric);
+		const topMols = getTopMols(metric);
 
 		const svg = d3.select(svgEl);
 		svg.selectAll('*').remove();
@@ -261,7 +282,7 @@
 		);
 
 		// legend + violin drawn on top of the zoom layer, pinned to SVG coords
-		drawLegendAndViolin(svg, sizeScale, threshold);
+		drawLegendAndViolin(svg, sizeScale, threshold, topMols);
 	}
 
 	function switchMetric(m: 'betweenness' | 'pagerank') {
@@ -296,4 +317,4 @@
 	</button>
 </div>
 
-<svg bind:this={svgEl} style="width:100%; height:450px;"></svg>
+<svg bind:this={svgEl} style="width:100%; height:100%;"></svg>

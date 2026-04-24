@@ -207,9 +207,10 @@
 		<main class="flex-grow-1 p-4" id="graph-area">
 		<div style="display: flex; align-items: flex-start; gap: 1%; width: 100%;">
 			<!-- full net -->
-			<div class="card border-primary mb-3" style="width: 65%; height: 550px; display: flex; flex-direction: column;">
+			<div class="card border-primary mb-3" 
+			style="width: 65%; height: 550px; display: flex; flex-direction: column;">
 				<p class="card-header">Full Network for {$selectedCaseStudy} : {$selectedComparison}</p>
-				<div style="flex: 1; min-height: 0; overflow: hidden;">
+				<div style="flex: 1; min-height: 0; overflow-y: auto;">
 				<FullNetwork {fullNet} />
 				</div>
 			</div>
@@ -225,10 +226,10 @@
 			</div>
 			</div>
 			<!-- filtered sender-receiver net -->
-			<div style="width: 100%; ">
+			<div style="display: flex; align-items: flex-start; gap: 1%; width: 100%;">
 				<div
 					class="card border-primary mb-3"
-					style="display: inline-block; vertical-align: top; width: 65%; "
+					style="width: 65%; height: 550px; display: flex; flex-direction: column;"
 				>
 					<ul class="nav nav-tabs" role="tablist">
 						<li class="nav-item" role="presentation">
@@ -287,30 +288,20 @@
 					</ul>
 					<div id="tabContainer" class="tab-content">
 						<div class="tab-pane fade show active" id="network-zoom" role="tabpanel">
-							<!-- <NetworkCircular {networkData} /> -->
 							<NetworkGraphZoom {networkData} />
 						</div>
 						<div class="tab-pane fade" id="network-circular" role="tabpanel">
-							<!-- {#if circularMounted} -->
-							<!-- <NetworkGraphZoom {networkData} /> -->
 							<NetworkCircular {networkData} />
-							<!-- {/if} -->
 						</div>
-						<!-- <div class="tab-pane fade" id="network-linear" role="tabpanel">
-							<p style="margin: 1rem;">Linear layout coming soon...</p>
-						</div> -->
 						<div class="tab-pane fade" id="network-hive" role="tabpanel">
 							<p style="margin: 1rem;">Hive layout coming soon...</p>
-							<!-- <NewNetworkCircular {networkData} /> -->
-							<!-- great failure the new NetworkCircular -->
 						</div>
 					</div>
-					<!-- <div style="width: 1000px; height: 300px;"> -->
-					<!-- regulate div dims from here -->
-					<!-- <NetworkGraphZoom {networkData} /> -->
-					<!-- </div> -->
 				</div>
-				<div style="display: inline-block; vertical-align: top; max-width: 40%;">
+				<div 
+				class="card border-primary mb-3"
+				style="width: 34%; height: 550px; display: flex; flex-direction: column;">
+					<p class="card-header">Deatiled Tree </p>
 					{#if $selectedNode}
 						<!-- keeps complaining about possibility of being null -->
 						<!-- <NetworkTree neighborhoodData={$neighborhoodData} /> -->

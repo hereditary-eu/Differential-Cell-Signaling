@@ -94,7 +94,12 @@
 				highlightNode(d.id, links, node, link);
 				// selectedNode.set(d.id);
 			});
-
+		node.call(
+			d3.drag<any, any>().on('drag', (e, d) => {
+				d.fx = e.x;
+				d.fy = e.y;
+			})
+		);
 		nodeSelection = node;
 		linkSelection = link;
 
@@ -134,8 +139,8 @@
 			});
 			node.attr('transform', (d: any) => `translate(${d.x}, ${d.y})`);
 		});
+		
 		drawLegend(svgContainer, $colorScale, $aesLRMapping, $aesTFMapping);
-
 		// apply highlight after re-render
 		applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
 	} //end of renderNetwork()
