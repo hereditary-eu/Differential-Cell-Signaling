@@ -176,10 +176,10 @@
 		// .call((sel) => aesEdge(sel, $aesLRMapping, $aesTFMapping));
 		// link.call((sel) => aesEdge(sel, $aesLRMapping, $aesTFMapping));
 		// debug:
-		link.each(function (d: any) {
-			const el = d3.select(this);
-			console.log('type:', d.type, 'marker-end:', el.attr('marker-end'), 'd:', el.attr('d'));
-		});
+		// link.each(function (d: any) {
+		// 	const el = d3.select(this);
+		// 	console.log('type:', d.type, 'marker-end:', el.attr('marker-end'), 'd:', el.attr('d'));
+		// });
 		const node = zoomLayer
 			.append('g')
 			.attr('stroke', '#fff')

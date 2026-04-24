@@ -62,11 +62,11 @@
 					.distance(15)
 					.strength(0.1)
 			)
-			.force('charge', d3.forceManyBody().strength(-10))
-			.force(
-				'collide',
-				d3.forceCollide((d: any) => 8)
-			)
+			.force('charge', d3.forceManyBody().strength(-23))
+			// .force(
+			// 	'collide',
+			// 	d3.forceCollide((d: any) => 8)
+			// )
 			.force('center', d3.forceCenter(width / 2, height / 2));
 
 		// draw links

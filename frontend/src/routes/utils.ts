@@ -4,9 +4,9 @@ import * as d3 from 'd3';
 // export variables and function to define dimension of plot, zoom behavior and initial position with initial zoom level
 export const width = 250;
 export const height = 200;
-const initialScale = 0.3;
-const initialX = width / 3;
-const initialY = height / 3;
+const initialScale = 0.14;
+const initialX = width / 2;
+const initialY = height / 2.3;
 
 export interface ZoomOptions {
     scaleExtent?: [number, number];

@@ -205,18 +205,24 @@
 			</div>
 		</aside>
 		<main class="flex-grow-1 p-4" id="graph-area">
+		<div style="display: flex; align-items: flex-start; gap: 1%; width: 100%;">
 			<!-- full net -->
-			<div class="card border-primary mb-3" style="width: 55%; display: inline-block;">
+			<div class="card border-primary mb-3" style="width: 65%; height: 550px; display: flex; flex-direction: column;">
 				<p class="card-header">Full Network for {$selectedCaseStudy} : {$selectedComparison}</p>
+				<div style="flex: 1; min-height: 0; overflow: hidden;">
 				<FullNetwork {fullNet} />
+				</div>
 			</div>
 
 			<div
 				class="card border-primary mb-3"
-				style="width: 44%; display: inline-block; vertical-align: top;"
+				style="width: 34%; height: 550px; display: flex; flex-direction: column;"
 			>
 				<p class="card-header">Overview </p>
-				<VisSeparateOverview {fullNet} />
+				<div style="flex: 1; min-height: 0; overflow-y: auto">
+				<VisSeparateOverview {fullNet} maxHeight={480} />
+				</div>
+			</div>
 			</div>
 			<!-- filtered sender-receiver net -->
 			<div style="width: 100%; ">

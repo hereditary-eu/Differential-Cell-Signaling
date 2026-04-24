@@ -37,7 +37,7 @@
 					.strength(0.15)
 			)
 			.force('charge', d3.forceManyBody().strength(-7))
-			.force('center', d3.forceCenter(width / 2, height / 2))
+			.force('center', d3.forceCenter(width * 0.8, height / 2))
 			.alphaDecay(0.02);
 
 		// draw links
