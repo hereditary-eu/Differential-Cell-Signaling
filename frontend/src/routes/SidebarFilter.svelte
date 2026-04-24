@@ -7,12 +7,9 @@
 		celltypes,
 		filtersApplied
 	} from '$lib/stores';
-	import { writable } from 'svelte/store';
 
 	const backend = import.meta.env.VITE_BACKEND_URL;
 
-	// Props
-	// export let loadFilteredData: (url: string) => Promise<void>;
 	const {
 		loadFilteredData
 	}: {
@@ -25,22 +22,35 @@
 	let pvThresh = $state(0.05);
 	let minIntrascore = $state(0.5);
 	let maxIntrascore = $state(1.0);
-	let interDir = $state('up'); // let interDir: 'up' | 'down' = 'up';
+	let interDir = $state('up');
 	let focusOnLR = $state(false);
-	let lastSender = writable('');
-	let lastReceiver = writable('');
-	// reset cell types when case study changes
+
+	let isResetting = false;
+
 	$effect(() => {
 		if ($selectedComparison) {
 			resetFilters();
 		}
 	});
+
+	$effect(() => {
+		const _ = [
+			$sender, $receiver, $reverseSig,
+			filterIntrascore, filterInter, filterPv,
+			pvThresh, minIntrascore, maxIntrascore,
+			interDir, focusOnLR
+		];
+
+		if (!isResetting) {
+			applyFilters();
+		}
+	});
+
 	function resetFilters() {
-		// reset cell types
+		isResetting = true;
+
 		sender.set($celltypes[0] || '');
 		receiver.set($celltypes[0] || '');
-
-		// reset filter toggles
 		filterIntrascore = false;
 		filterInter = false;
 		filterPv = true;
@@ -50,8 +60,12 @@
 		interDir = 'up';
 		focusOnLR = false;
 
-		filtersApplied.set(true);
+		setTimeout(() => {
+			isResetting = false;
+			applyFilters();
+		}, 0);
 	}
+
 	function applyFilters() {
 		const query = new URLSearchParams({
 			comparison: $selectedComparison,
@@ -67,8 +81,6 @@
 			inter_dir: interDir,
 			focus_on_LR: focusOnLR.toString()
 		});
-		lastSender.set($sender);
-		lastReceiver.set($receiver);
 
 		filtersApplied.set(true);
 		loadFilteredData(`${backend}/api/filtered_data?${query.toString()}`);
@@ -79,7 +91,7 @@
 	<!-- Sidebar for filters -->
 	<!--  cell type(s) selection -->
 	<div>
-		<p class="block mb-1 font-semibold">Select cell types:</p>
+		<p class="block mb-1 font-semibold">Cell types:</p>
 		<div class="d-flex">
 			<div style="width: 45%; margin-right: 3%;">
 				<label for="sender-select">Sender:</label>
@@ -88,6 +100,7 @@
 					class="border rounded p-2"
 					style="width: 100%;"
 					bind:value={$sender}
+					onchange={applyFilters}
 				>
 					{#each $celltypes as ct}
 						<option value={ct}>{ct}</option>
@@ -102,6 +115,7 @@
 					class="border rounded p-2"
 					style="width: 100%;"
 					bind:value={$receiver}
+					onchange={applyFilters}
 				>
 					{#each $celltypes as ct}
 						<option value={ct}>{ct}</option>
@@ -135,6 +149,7 @@
 				max="1"
 				step="0.01"
 				bind:value={minIntrascore}
+				onselect={applyFilters}
 			/>
 			<br />
 			<label for="intra-max-tresh">Max: {maxIntrascore}</label>
@@ -145,17 +160,18 @@
 				max="1"
 				step="0.01"
 				bind:value={maxIntrascore}
+				onselect={applyFilters}
 			/>
 		</div>
 	{/if}
 	<!-- Significance filter -->
 	<div class="flex items-center gap-2">
 		<input id="pv-filter" type="checkbox" bind:checked={filterPv} />
-		<label for="pv-filter">Filter by significance (p-value)</label>
+		<label for="pv-filter">Filter by significance</label>
 	</div>
 	{#if filterPv}
 		<div>
-			<label for="pv-thresh">Threshold: {pvThresh}</label>
+			<label for="pv-thresh">p-value threshold: {pvThresh}</label>
 			<input
 				id="pv-thresh"
 				type="number"
@@ -185,20 +201,4 @@
 		<label for="focus-LR">Focus on LR interactions</label>
 	</div>
 
-	<!-- Apply button -->
-	<br />
-	<button
-		id="apply-filters-btn"
-		type="button"
-		class="btn btn-dark"
-		onclick={() => applyFilters()}
-		disabled={$sender === '' || $receiver === ''}
-	>
-		Apply filters
-	</button>
-
-	<br />
-	{#if $filtersApplied}<span class="badge bg-success"
-			>Selected cell types: {$lastSender}, {$lastReceiver}</span
-		>{/if}
 </div>

@@ -6,7 +6,7 @@ export const receiver = writable('');
 export const reverseSig = writable(false);
 export const celltypes = writable([]);
 export const colorScale = derived(celltypes, ($celltypes): d3.ScaleOrdinal<string, string, string> => {
-    return scaleOrdinal<string, string, string>()  // Explicitly typed generic parameters including unknown type
+    return scaleOrdinal<string, string, string>() 
         .domain($celltypes)
         .range(schemeTableau10)
         .unknown('#999999');  // Use a fallback color string instead of undefined

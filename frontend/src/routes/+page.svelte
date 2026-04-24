@@ -6,6 +6,7 @@
 	import NetworkGraphZoom from './NetworkGraphZoom.svelte';
 	import NetworkCircular from './NetworkCircular.svelte';
 	import FullNetwork from './NetworkFull.svelte';
+	import VisSeparateOverview from './OverviewVis.svelte';
 
 	import {
 		celltypes,
@@ -33,30 +34,26 @@
 		nTFLLinks: number;
 		nRTFLinks: number;
 	}
-	let static_info = $state({ celltypes: [], total_nodes: 0, total_links: 0 });
 	let networkData = $state({ nodes: [], links: [], stats: {} as NetworkStats });
-	let fullNet = $state({ nodes: [], links: [], stats: {} as NetworkStats });
+	let fullNet = $state({
+		nodes: [],
+		links: [],
+		stats: {} as NetworkStats,
+		celltypes: [],
+		total_nodes: 0,
+		total_links: 0,
+		heatmaps: {
+			lr_heatmap: { data: {}, sender_totals: {}, receiver_totals: {} },
+			tfl_heatmap: { data: {} },
+			rtf_heatmap: { data: {} }
+		}
+	});
 
 	$effect(() => {
 		if ($selectedComparison) {
-			loadStaticInfo();
 			loadFullNetwork();
 		}
 	});
-	// change static info when case study - comparison selection changes
-	async function loadStaticInfo() {
-		try {
-			// console.log('Loading static info for comparison:', $selectedComparison);
-			const res = await fetch(`${backend}/api/static_info?comparison=${$selectedComparison}`);
-			static_info = await res.json();
-			if (static_info?.celltypes) {
-				celltypes.set(static_info.celltypes);
-			}
-		} catch (err) {
-			console.error('Error fetching celltypes:', err);
-			// static_info = null;
-		}
-	}
 	async function loadFullNetwork() {
 		try {
 			const statusRes = await fetch(
@@ -70,6 +67,7 @@
 			}
 			const res = await fetch(`${backend}/api/full_net?comparison=${$selectedComparison}`);
 			fullNet = await res.json();
+			celltypes.set(fullNet.celltypes);
 		} catch (err) {
 			console.error('Error loading full network:', err);
 		}
@@ -105,7 +103,7 @@
 
 <div class="app">
 	<div class="d-flex">
-		<aside class="bg-light border-end" style="width: 20%;">
+		<aside class="bg-light border-end" style="width: 24%;">
 			<div class="accordion" id="leftSidebarAccordion">
 				<div class="accordion-item">
 					<h2 class="accordion-header" id="CaseStudies">
@@ -208,20 +206,17 @@
 		</aside>
 		<main class="flex-grow-1 p-4" id="graph-area">
 			<!-- full net -->
-			<div class="card border-primary mb-3" style="width: 65%;">
-				<!-- <button
-					type="button"
-					class="btn btn-info"
-					style="position: absolute; right: 0.7rem; top: 0.7rem; width: 1rem; height: 1rem; padding: 0;"
-					data-bs-toggle="tooltip"
-					data-bs-placement="right"
-					data-bs-content={`Network showing all cell types and all interactions (LR, TFL, RTF). LR interactions are filtered by significance (q-value < 0.05). Size of network is #nodes: {fullNet
-						.stats.nNodes}, #links: {fullNet.stats.nLinks}.`}
-					data-bs-html="true"
-					aria-describedby="tooltipFullNet">i</button
-				> -->
+			<div class="card border-primary mb-3" style="width: 55%; display: inline-block;">
 				<p class="card-header">Full Network for {$selectedCaseStudy} : {$selectedComparison}</p>
 				<FullNetwork {fullNet} />
+			</div>
+
+			<div
+				class="card border-primary mb-3"
+				style="width: 44%; display: inline-block; vertical-align: top;"
+			>
+				<p class="card-header">Overview </p>
+				<VisSeparateOverview {fullNet} />
 			</div>
 			<!-- filtered sender-receiver net -->
 			<div style="width: 100%; ">
@@ -325,8 +320,8 @@
 				<div class="card-body">
 					<p class="card-text">
 						N. cell types: {$celltypes.length} <br />
-						Total nodes: {static_info.total_nodes} <br />
-						Total links: {static_info.total_links} <br />
+						Total nodes: {fullNet.total_nodes} <br />
+						Total links: {fullNet.total_links} <br />
 					</p>
 				</div>
 			</div>

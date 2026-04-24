@@ -80,10 +80,10 @@
 			.filter((d) => d.v != null);
 
 		const VPAD_TOP = 100; // y-pixel where violin top starts (below legend)
-		const VPAD_BOT = 20; // bottom margin inside the SVG
+		const VPAD_BOT = 5; // bottom margin inside the SVG
 		const violinH = H - VPAD_TOP - VPAD_BOT;
 		const cx = 70; // horizontal centre of violin in the legend column
-		const halfW = 28; // max half-width of violin body
+		const halfW = 35; // max half-width of violin body
 
 		const yScale = d3
 			.scaleLinear()

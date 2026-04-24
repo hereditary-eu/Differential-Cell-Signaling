@@ -30,43 +30,19 @@ def get_db_connection():
         port='5436'
     )
 
-@app.get('/api/static_info')
-def get_celltypes(comparison: str):
-    """Return distinct cell types from the nodes table."""
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    cur.execute('SELECT DISTINCT celltype FROM nodes WHERE comparison = %s;', (comparison,))
-    celltypes = [row[0] for row in cur.fetchall()]
-    cur.execute('SELECT COUNT(*) FROM nodes WHERE comparison = %s;', (comparison,))
-    total_nodes = cur.fetchone()[0]
-    cur.execute('SELECT COUNT(*) FROM links WHERE comparison = %s;', (comparison,))
-    total_links = cur.fetchone()[0]
-    
-    cur.close()
-    conn.close()
-
-    return {'celltypes': celltypes,
-            'total_nodes': total_nodes,
-            'total_links': total_links}
-
 @app.get('/api/neighborhood')
 def get_neighborhood_data(node_id: str, comparison: str, sender: str, receiver: str, max_depth: int = 4):
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    print(f"Fetching neighborhood for node {node_id} in comparison {comparison} between {sender} and {receiver}")
     cur.execute("""
         SELECT *
         FROM nodes
         WHERE id = %s
     """, (node_id,))
-    print('fifth')
     rootnode = cur.fetchone()
-    print(f"Root node: {rootnode}")
     if not rootnode:
         cur.close()
         conn.close()
-        print('closed nothing 0')
         return {"rootnode": None, "neighbors": [], "links": []}
     #filter nodes subset
     cur.execute("""
@@ -75,7 +51,6 @@ def get_neighborhood_data(node_id: str, comparison: str, sender: str, receiver: 
         WHERE comparison = %s
         AND celltype IN (%s, %s)
     """, (comparison, sender, receiver))
-    print('first')
     valid_node_ids = [row["id"] for row in cur.fetchall()]
     
     cur.execute("""
@@ -103,12 +78,11 @@ def get_neighborhood_data(node_id: str, comparison: str, sender: str, receiver: 
         SELECT DISTINCT id
         FROM graph;
     """, (node_id, max_depth, valid_node_ids))
-    print('second')
+
     node_ids = [row["id"] for row in cur.fetchall()]
     if not node_ids:
         cur.close()
         conn.close()
-        print('closed nothing 2')
         return {"rootnode": None, "neighbors": [], "links": []}
 
     #get all nodes in neighborhood
@@ -117,7 +91,6 @@ def get_neighborhood_data(node_id: str, comparison: str, sender: str, receiver: 
         FROM nodes
         WHERE id = ANY(%s)
     """, (node_ids,))
-    print('third')
     nodes = cur.fetchall()
     #get all links between these nodes
     cur.execute("""
@@ -127,12 +100,10 @@ def get_neighborhood_data(node_id: str, comparison: str, sender: str, receiver: 
         AND target = ANY(%s)
         AND comparison = %s
     """, (node_ids, node_ids, comparison))
-    print('fourth')
     links = cur.fetchall()
 
     cur.close()
     conn.close()
-    print(f"Fetched neighborhood with {len(nodes)} nodes and {len(links)} links.")
     return {'rootnode': rootnode,'neighbors': nodes, 'links': links}
 
 # benedikt if u see this, it's just temporary!!!! :) i'll switch to puppygraph. es tut mir leid
@@ -262,8 +233,7 @@ def precompute(comparison: str):
     cur2.close()
     cur.close()
     conn.close()
-    print(f"Done. Beteweenness outlier threshold: {b_threshold:.4f}, Pagerank outlier threshold: {p_threshold:.4f}")
-
+    
 @app.get('/api/centrality_status')
 def centrality_status(comparison: str):
     """Check if centrality has already been computed for this comparison."""
@@ -294,6 +264,15 @@ def precompute_centrality_endpoint(comparison: str):
 @app.get('/api/full_net')
 def get_full_network(comparison: str):
     conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT DISTINCT celltype FROM nodes WHERE comparison = %s;', (comparison,))
+    celltypes = [row[0] for row in cur.fetchall()]
+    cur.execute('SELECT COUNT(*) FROM nodes WHERE comparison = %s;', (comparison,))
+    total_nodes = cur.fetchone()[0]
+    cur.execute('SELECT COUNT(*) FROM links WHERE comparison = %s;', (comparison,))
+    total_links = cur.fetchone()[0]
+    cur.close()
+    
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute('SELECT * FROM nodes WHERE comparison = %s;', (comparison,))
     nodes = cur.fetchall()
@@ -312,6 +291,33 @@ def get_full_network(comparison: str):
     link_type_counts = Counter(l['type'] for l in links)
     b_outlier_threshold = min((n['betweenness'] for n in nodes if n['is_outlier_b']), default=0)
     p_outlier_threshold = min((n['pagerank'] for n in nodes if n['is_outlier_p']), default=0)
+
+    node_map = {n['id']: n for n in nodes}
+    # compute data for heatmaps 
+    lr_counts: dict[tuple[str, str], int] = Counter()
+    tfl_counts: dict[str, int] = Counter()
+    rtf_counts: dict[str, int] = Counter()
+    
+    for l in links:
+        src = node_map.get(l['source'])
+        tgt = node_map.get(l['target'])
+        if l['type'] == 'LR':        
+            if src and tgt:
+                lr_counts[(src['celltype'], tgt['celltype'])] += 1
+        elif l['type'] == 'TFL':
+            tfl_counts[src['celltype']] += 1
+        else:
+            rtf_counts[tgt['celltype']] += 1
+    celltypes = sorted({ct for pair in lr_counts for ct in pair})
+    lr_heatmap = [
+        {'sender': s, 'receiver': r, 'count': lr_counts.get((s, r), 0)}
+        for s in celltypes
+        for r in celltypes
+    ]
+    # marginal sums for the bars
+    lr_sender_totals = {s: sum(lr_counts.get((s, r), 0) for r in celltypes) for s in celltypes}
+    lr_receiver_totals = {r: sum(lr_counts.get((s, r), 0) for s in celltypes) for r in celltypes}
+
     return {'nodes': nodes, 
             'links': links, 
             'stats': {
@@ -325,6 +331,18 @@ def get_full_network(comparison: str):
                 'nRTFLinks': link_type_counts.get('RTF', 0),
                 'b_outlierThreshold': b_outlier_threshold,
                 'p_outlierThreshold': p_outlier_threshold
+            },
+            'total_nodes' : total_nodes,
+            'total_links' : total_links,
+            'celltypes' : celltypes,
+            'heatmaps' : {
+                'lr_heatmap' : {
+                    'data': lr_heatmap,
+                    'sender_totals': lr_sender_totals,
+                    'receiver_totals': lr_receiver_totals,
+                },
+                'tfl_heatmap' : { 'data' : tfl_counts },
+                'rtf_heatmap' : { 'data' : rtf_counts }
             }
         }
 

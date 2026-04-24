@@ -110,7 +110,7 @@
 		node.append('title').text((d: any) => `${d.name} (${d.celltype}) - ${d.moltype}`);
 		link.append('title').text((d: any) => {
 			if (d.type === 'LR') {
-				return `${d.type} (${d.source.name} → ${d.target.name}) weight: ${d.weight} significance: ${d.significance}`;
+				return `${d.type} (${d.source.name} → ${d.target.name}) weight: ${d.weight.toFixed(4)} significance: ${d.significance.toFixed(4)}`;
 			} else {
 				return `${d.type} (${d.source.name} → ${d.target.name})`;
 			}
@@ -140,7 +140,6 @@
 		applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
 	} //end of renderNetwork()
 
-	// Redraw when data changes
 	$: {
 		$aesLRMapping;
 		$aesTFMapping;

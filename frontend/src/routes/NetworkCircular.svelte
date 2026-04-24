@@ -86,12 +86,11 @@
 	}
 
 	const renderNetwork = () => {
-		console.log('render network called from circular');
 		if (!svgContainer) return;
 		if (!networkData?.nodes?.length) return;
 		simulation?.stop();
 
-		const n = ringCount();
+		const n = $sender === $receiver ? 3 : ringCount();
 		// Reset ring state only when ring count changes (for reverseSig)
 		if (ringRadii.length !== n) {
 			ringRadii = Array.from({ length: n }, (_, i) => 130 + i * 110);

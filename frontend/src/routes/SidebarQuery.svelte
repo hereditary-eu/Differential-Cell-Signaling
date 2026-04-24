@@ -15,10 +15,10 @@
 <button id="find-cycles-btn" type="button" class="btn btn-dark" on:click={findCycles} disabled>
 	Find Cycles
 </button>
-<hr />
+<!-- <hr />
 <button id="filter-net-stats-btn" type="button" class="btn btn-dark" disabled>
 	Compute Network Science Metrics
-</button>
+</button> -->
 <hr />
 <button id="GEA-btn" type="button" class="btn btn-dark" disabled>
 	Perform GO Enrichment Analysis
