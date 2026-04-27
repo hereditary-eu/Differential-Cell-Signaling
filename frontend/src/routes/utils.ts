@@ -4,9 +4,9 @@ import * as d3 from 'd3';
 // export variables and function to define dimension of plot, zoom behavior and initial position with initial zoom level
 export const width = 250;
 export const height = 200;
-const initialScale = 0.14;
+const initialScale = 0.18;
 const initialX = width / 2;
-const initialY = height / 2.3;
+const initialY = height / 2.4;
 
 export interface ZoomOptions {
     scaleExtent?: [number, number];
@@ -129,24 +129,28 @@ export function drawLegend(
     colorScale: d3.ScaleOrdinal<string, any, string>,
     aesLRMapping: 'reset' | 'viridis' | 'volcano',
     aesTFMapping: 'reset' | 'endShape',
+    sender: string,
+    receiver: string,
+    colorCT: boolean = true,
     symbolSize: number = 6,
     spacing: number = 7,
     fontSize: number = 4,
     full_net: boolean = false
 ) {
-    // cell type legend
     const g = d3
         .select(svg)
         .append("g")
         .attr("class", "legend")
         .attr("transform", "translate(5, 10)");
+    // cell type legend
+    // if (colorCT) {
         g.append("text")
             .attr("class", "legend-title")
             .attr("x", -1)
             .attr("y", -3) // adjust this for distance from legend
             .style("font-size", `${fontSize + 1}px`)
             .text('Cell types:');
-    const items = colorScale.domain();
+    const items = colorScale.domain().filter((i) => i === sender || i === receiver);
     const group = g
         .selectAll("g.legend-item")
         .data(items)
@@ -166,6 +170,9 @@ export function drawLegend(
         .attr("dominant-baseline", "middle")
         .style("font-size", `${fontSize}px`)
         .text(d => d);
+    // } else {
+    //     const items = [];
+    // }
     //moltype legend
     const m = d3.select(svg).append("g").attr("class", "legend").attr("transform", `translate(5, ${20 + items.length * spacing + 2})`);
     m.append("text")
@@ -200,7 +207,8 @@ export function drawLegend(
         .text(d => d);
     if (!full_net) {
         // LR legend
-        let offsetY = 50 + items.length * spacing;
+        // let offsetY = 50 + ( colorCT ? items.length * spacing : 0 );
+        let offsetY = 50 + items.length * spacing ;
         if (aesLRMapping !== 'reset') {
             const lrLegend = d3.select(svg).append("g").attr("class", "legend").attr("transform", `translate(5, ${offsetY})`);
             lrLegend.append("text")

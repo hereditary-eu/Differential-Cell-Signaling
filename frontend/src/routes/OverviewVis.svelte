@@ -3,13 +3,10 @@
   import * as d3 from 'd3';
   import { sender, receiver } from '$lib/stores';
 
-  interface NetworkStats {
-    nNodes: number; nLigands: number; nReceptors: number; nTFs: number;
-    nLinks: number; nLRLinks: number; nTFLLinks: number; nRTFLinks: number;
-  }
   type LRDatum = { sender: string; receiver: string; count: number };
-  type FullNet = {
-    nodes: unknown[]; links: unknown[]; stats: NetworkStats;
+
+  export let fullNet: {
+    nodes: any[]; links: any[]; stats?: any;
     celltypes: string[]; total_nodes: number; total_links: number;
     heatmaps: {
       lr_heatmap: {
@@ -20,9 +17,7 @@
       tfl_heatmap: { data: Record<string, number> };
       rtf_heatmap: { data: Record<string, number> };
     };
-  };
-
-  export let fullNet: FullNet;
+  };;
   export let maxHeight: number = 530;
 
   let containerEl: HTMLDivElement;
@@ -142,7 +137,7 @@
       .text('SENDER');
 
     svg.append('text')
-      .attr('x', gx - gridW / 4).attr('y', 8)
+      .attr('x', gx - gridW / 5).attr('y', 8)
       .attr('text-anchor', 'middle')
       .style('font-size', '11px')
       .text('LR INTERACTIONS');
@@ -160,9 +155,9 @@
     });
 
     // right bars (sender totals)
-    const maxS      = d3.max(Object.values(sender_totals)) ?? 1;
+    const maxS = d3.max(Object.values(sender_totals)) ?? 1;
     const scaleRight = d3.scaleLinear().domain([0, maxS]).range([0, BAR_SIZE - 4]);
-    const rightG    = svg.append('g').attr('transform', `translate(${gx + gridW + 4},${gy})`);
+    const rightG = svg.append('g').attr('transform', `translate(${gx + gridW + 4},${gy})`);
     cts.forEach(ct => {
       rightG.append('rect')
         .attr('x', 0).attr('y', y(ct)!)
@@ -267,7 +262,8 @@
 
     // title
     svg.append('text')
-      .attr('x', gx - gridW / 4).attr('y', 8)
+      .attr('x', gx - gridW / 5)
+      .attr('y', 8)
       .attr('text-anchor', 'middle')
       .style('font-size', '11px')
       .text('TF INTERACTIONS');

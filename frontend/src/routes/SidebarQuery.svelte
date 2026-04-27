@@ -12,7 +12,7 @@
 	}
 </script>
 
-<button id="find-cycles-btn" type="button" class="btn btn-dark" on:click={findCycles} disabled>
+<button id="find-cycles-btn" type="button" class="btn btn-primary" on:click={findCycles} disabled>
 	Find Cycles
 </button>
 <!-- <hr />
@@ -20,6 +20,6 @@
 	Compute Network Science Metrics
 </button> -->
 <hr />
-<button id="GEA-btn" type="button" class="btn btn-dark" disabled>
+<button id="GEA-btn" type="button" class="btn btn-primary" disabled>
 	Perform GO Enrichment Analysis
 </button>

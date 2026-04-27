@@ -18,8 +18,7 @@
 		neighborhoodData,
 		aesLRMapping,
 		aesTFMapping,
-		colorCT,
-		molecules
+		colorCT
 	} from '$lib/stores';
 
 	const backend = import.meta.env.VITE_BACKEND_URL;
@@ -208,7 +207,7 @@
 		<div style="display: flex; align-items: flex-start; gap: 1%; width: 100%;">
 			<!-- full net -->
 			<div class="card border-primary mb-3" 
-			style="width: 65%; height: 550px; display: flex; flex-direction: column;">
+			style="width: 60%; height: 550px; display: flex; flex-direction: column;">
 				<p class="card-header">Full Network for {$selectedCaseStudy} : {$selectedComparison}</p>
 				<div style="flex: 1; min-height: 0; overflow-y: auto;">
 				<FullNetwork {fullNet} />
@@ -217,7 +216,7 @@
 
 			<div
 				class="card border-primary mb-3"
-				style="width: 34%; height: 550px; display: flex; flex-direction: column;"
+				style="width: 39%; height: 550px; display: flex; flex-direction: column;"
 			>
 				<p class="card-header">Overview </p>
 				<div style="flex: 1; min-height: 0; overflow-y: auto">
@@ -229,7 +228,7 @@
 			<div style="display: flex; align-items: flex-start; gap: 1%; width: 100%;">
 				<div
 					class="card border-primary mb-3"
-					style="width: 65%; height: 550px; display: flex; flex-direction: column;"
+					style="width: 60%; height: 550px; display: flex; flex-direction: column;"
 				>
 					<ul class="nav nav-tabs" role="tablist">
 						<li class="nav-item" role="presentation">
@@ -242,15 +241,9 @@
 								>Concentric Circular</a
 							>
 						</li>
-						<!-- <li class="nav-item" role="presentation">
-							<a class="nav-link" data-bs-toggle="tab" href="#network-linear" role="tab">Linear</a>
-						</li> -->
 						<li class="nav-item" role="presentation">
 							<a class="nav-link" data-bs-toggle="tab" href="#network-hive" role="tab">Hive</a>
 						</li>
-						<!-- <li class="nav-item" role="presentation">
-							<a class="nav-link" data-bs-toggle="tab" href="#network-tree" role="tab">Tree</a>
-						</li> -->
 						<li class="nav-item dropdown">
 							<a
 								class="nav-link dropdown-toggle show"
@@ -264,8 +257,6 @@
 								<a class="dropdown-item" href="#drop" onclick={() => ($colorCT = !$colorCT)}
 									>CellTypes color</a
 								>
-								<!-- <input class="form-check-input dropdown-item" type="checkbox" id="colorCTcheck" />
-								<label for="colorCTcheck">Cell types color</label> -->
 								<div class="dropdown-divider"></div>
 								<a class="dropdown-item" href="#drop" onclick={() => aesLRMapping.set('viridis')}
 									>LR viridis</a
@@ -286,7 +277,7 @@
 							</div>
 						</li>
 					</ul>
-					<div id="tabContainer" class="tab-content">
+					<div id="tabContainer" class="tab-content" style="overflow: auto;">
 						<div class="tab-pane fade show active" id="network-zoom" role="tabpanel">
 							<NetworkGraphZoom {networkData} />
 						</div>
@@ -300,7 +291,7 @@
 				</div>
 				<div 
 				class="card border-primary mb-3"
-				style="width: 34%; height: 550px; display: flex; flex-direction: column;">
+				style="width: 39%; height: 550px; display: flex; flex-direction: column;">
 					<p class="card-header">Deatiled Tree </p>
 					{#if $selectedNode}
 						<!-- keeps complaining about possibility of being null -->

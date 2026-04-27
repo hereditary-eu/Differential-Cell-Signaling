@@ -386,7 +386,8 @@
 					simulation.alpha(0.05).restart();
 				})
 		);
-		drawLegend(svgContainer, $colorScale, $aesLRMapping, $aesTFMapping);
+		console.log('COLORCT ', $colorCT);
+		drawLegend(svgContainer, $colorScale, $aesLRMapping, $aesTFMapping, $sender, $receiver, $colorCT);
 		nodeSelection = node;
 		linkSelection = link;
 		// apply highlight after re-render

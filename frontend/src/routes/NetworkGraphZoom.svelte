@@ -19,7 +19,10 @@
 		highlightedNode,
 		aesLRMapping,
 		aesTFMapping,
-		colorCT
+		colorCT,
+		sender,
+		receiver
+
 	} from '$lib/stores';
 
 	export let networkData: { nodes: any[]; links: any[] };
@@ -67,7 +70,7 @@
 			// 	'collide',
 			// 	d3.forceCollide((d: any) => 8)
 			// )
-			.force('center', d3.forceCenter(width / 2, height / 2));
+			.force('center', d3.forceCenter(width / 2, height / 2.4));
 
 		// draw links
 		const link = zoomLayer
@@ -140,7 +143,7 @@
 			node.attr('transform', (d: any) => `translate(${d.x}, ${d.y})`);
 		});
 		
-		drawLegend(svgContainer, $colorScale, $aesLRMapping, $aesTFMapping);
+		drawLegend(svgContainer, $colorScale, $aesLRMapping, $aesTFMapping, $sender, $receiver, $colorCT);
 		// apply highlight after re-render
 		applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
 	} //end of renderNetwork()
