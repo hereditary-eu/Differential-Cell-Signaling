@@ -104,7 +104,7 @@
 
 		const PADDING = 100;
 		const numRanks = $reverseSig ? 4 : 6;
-		const yForRank = (rank: number) => PADDING + (rank / (numRanks - 1)) * (H - PADDING * 2);
+		const yForRank = (rank: number) => PADDING + (rank / (numRanks - 1)) * (H - PADDING * 3); // + d3.randomUniform(-4, 4)();
 
 		// Deduplicate TFs
 		const { nodes: dedupNodes, links: dedupLinks } = deduplicateTFs(

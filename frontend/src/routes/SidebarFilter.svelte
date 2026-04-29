@@ -57,8 +57,8 @@
 	function resetFilters() {
 		isResetting = true;
 
-		sender.set($celltypes[0] || '');
-		receiver.set($celltypes[0] || '');
+		// sender.set($celltypes[0] || '');
+		// receiver.set($celltypes[0] || '');
 		filterIntrascore = false;
 		filterInter = false;
 		filterPv = true;

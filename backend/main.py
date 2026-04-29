@@ -245,7 +245,15 @@ def get_full_network(comparison: str):
     b_topMols = [n['name'] for n in sorted(nodes, key=lambda n: (n['betweenness']or 0 ), reverse=True)]
     b_topMols = list(dict.fromkeys(b_topMols))[:5] #keep order but remove duplicates 
     p_topMols = list(dict.fromkeys([n['name'] for n in sorted(nodes, key=lambda n: (n['pagerank'] or 0), reverse=True)]))[:5]
-
+    print(lr_counts)
+    top_sr = max(lr_counts, key=lr_counts.get, default=None)
+    print(f"Top sender-receiver pair: {top_sr}")
+    if top_sr:
+        top_sender = top_sr[0]
+        top_receiver = top_sr[1]
+    else: 
+        top_sender = top_receiver = None
+    print(f"Top sender: {top_sender}, Top receiver: {top_receiver}")
     return {'nodes': nodes, 
             'links': links, 
             'stats': {
@@ -273,6 +281,10 @@ def get_full_network(comparison: str):
                 },
                 'tfl_heatmap' : { 'data' : tfl_counts },
                 'rtf_heatmap' : { 'data' : rtf_counts }
+            },
+            'initialize' : {
+                'sender': top_sender,
+                'receiver': top_receiver
             }
         }
 
@@ -406,6 +418,8 @@ def get_filtered_network(
         comparison, sender, receiver, reverse_sig, filter_intrascore, filter_pv, filter_inter,
         min_intrascore, max_intrascore, pv_thresh, focus_on_LR, inter_dir
     )
+    # print(nodes[:5])  # Debug: print first 5 nodes
+    # print(sorted(nodes, key=lambda n: (n['pagerank'] or 0), reverse=True)[:3])
     stats = {
         'nNodes': len(nodes),
         'nLigands': 0,
@@ -440,7 +454,9 @@ def get_filtered_network(
     return {
         'nodes': nodes,
         'links': links,
-        'stats': stats
+        'stats': stats,
+        'p_top3Mols': sorted(nodes, key=lambda n: (n['pagerank'] or 0), reverse=True)[:3],
+        'b_top3Mols': sorted(nodes, key=lambda n: (n['betweenness'] or 0), reverse=True)[:3]
     }
 
 @app.get('/api/neighborhood')

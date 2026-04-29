@@ -35,8 +35,12 @@
 		nLRLinks: number;
 		nTFLLinks: number;
 		nRTFLinks: number;
+		b_outlierThreshold: number;
+		p_outlierThreshold: number;
+		b_topMols: any[];
+		p_topMols: any[];
 	}
-	let networkData = $state({ nodes: [], links: [], stats: {} as NetworkStats });
+	let networkData = $state({ nodes: [], links: [], stats: {} as NetworkStats, p_top3Mols: [], b_top3Mols: [] });
 	let fullNet = $state({
 		nodes: [],
 		links: [],
@@ -48,7 +52,8 @@
 			lr_heatmap: { data: {}, sender_totals: {}, receiver_totals: {} },
 			tfl_heatmap: { data: {} },
 			rtf_heatmap: { data: {} }
-		}
+		},
+		initialize: { sender: '', receiver: '' }
 	});
 
 	$effect(() => {
@@ -70,6 +75,8 @@
 			const res = await fetch(`${backend}/api/full_net?comparison=${$selectedComparison}`);
 			fullNet = await res.json();
 			celltypes.set(fullNet.celltypes);
+			sender.set(fullNet.initialize.sender);
+			receiver.set(fullNet.initialize.receiver);
 		} catch (err) {
 			console.error('Error loading full network:', err);
 		}
@@ -79,6 +86,9 @@
 		try {
 			const res = await fetch(url);
 			networkData = await res.json();
+			console.log('from loadFilteredData: ', networkData.p_top3Mols[0]['id'])
+			selectedNode.set(networkData.p_top3Mols[0]['id']);
+			selectedNodeName.set(networkData.p_top3Mols[0]['name'])
 		} catch (err) {
 			console.error('Error loading data:', err);
 		}
@@ -86,6 +96,7 @@
 	// update selectedNode and pass neighboorhoodData to detailed view
 	$effect(() => {
 		if ($selectedNode) {
+			console.log('CALLING fetchNeighborhood')
 			fetchNeighborhood($selectedNode);
 		}
 	});
@@ -107,7 +118,7 @@
 
 <div class="app">
 	<div class="d-flex">
-		<aside class="bg-light border-end" style="width: 24%;">
+		<aside class="bg-light border-end" style="width: 24%; position: sticky; top: 0; height: 100vh; overflow-y: auto;">
 			<div class="accordion" id="leftSidebarAccordion">
 				<div class="accordion-item">
 					<h2 class="accordion-header" id="CaseStudies">
