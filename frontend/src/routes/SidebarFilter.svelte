@@ -5,7 +5,8 @@
 		receiver,
 		reverseSig,
 		celltypes,
-		filtersApplied
+		filtersApplied,
+		filteringQueryStr
 	} from '$lib/stores';
 
 	const backend = import.meta.env.VITE_BACKEND_URL;
@@ -23,7 +24,7 @@
 	let minIntrascore = $state(0.5);
 	let maxIntrascore = $state(1.0);
 	let interDir = $state('up');
-	let focusOnLR = $state(false);
+	let focusOnLR = $state(true);
 
 	let isResetting = false;
 
@@ -35,10 +36,17 @@
 
 	$effect(() => {
 		const _ = [
-			$sender, $receiver, $reverseSig,
-			filterIntrascore, filterInter, filterPv,
-			pvThresh, minIntrascore, maxIntrascore,
-			interDir, focusOnLR
+			$sender,
+			$receiver,
+			$reverseSig,
+			filterIntrascore,
+			filterInter,
+			filterPv,
+			pvThresh,
+			minIntrascore,
+			maxIntrascore,
+			interDir,
+			focusOnLR
 		];
 
 		if (!isResetting) {
@@ -58,7 +66,7 @@
 		minIntrascore = 0.5;
 		maxIntrascore = 1.0;
 		interDir = 'up';
-		focusOnLR = false;
+		focusOnLR = true;
 
 		setTimeout(() => {
 			isResetting = false;
@@ -81,7 +89,9 @@
 			inter_dir: interDir,
 			focus_on_LR: focusOnLR.toString()
 		});
-
+		filteringQueryStr.set(`${query.toString()}`);
+		console.log('FILTERING QUERY TO STR');
+		console.log(filteringQueryStr);
 		filtersApplied.set(true);
 		loadFilteredData(`${backend}/api/filtered_data?${query.toString()}`);
 	}
@@ -197,8 +207,7 @@
 
 	<!-- Focus on LR filter -->
 	<div class="flex items-center gap-2">
-		<input id="focus-LR" type="checkbox" bind:checked={focusOnLR} />
+		<input id="focus-LR" type="checkbox" bind:checked={focusOnLR} defaultChecked />
 		<label for="focus-LR">Focus on LR interactions</label>
 	</div>
-
 </div>

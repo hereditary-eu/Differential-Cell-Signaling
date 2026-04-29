@@ -6,7 +6,7 @@ import psycopg2.extras
 from typing import Literal
 import statistics
 import networkx as nx
-from collections import Counter
+from collections import Counter, defaultdict, deque
 
 app = FastAPI()
 
@@ -29,82 +29,6 @@ def get_db_connection():
         host='localhost',
         port='5436'
     )
-
-@app.get('/api/neighborhood')
-def get_neighborhood_data(node_id: str, comparison: str, sender: str, receiver: str, max_depth: int = 4):
-    conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("""
-        SELECT *
-        FROM nodes
-        WHERE id = %s
-    """, (node_id,))
-    rootnode = cur.fetchone()
-    if not rootnode:
-        cur.close()
-        conn.close()
-        return {"rootnode": None, "neighbors": [], "links": []}
-    #filter nodes subset
-    cur.execute("""
-        SELECT id
-        FROM nodes
-        WHERE comparison = %s
-        AND celltype IN (%s, %s)
-    """, (comparison, sender, receiver))
-    valid_node_ids = [row["id"] for row in cur.fetchall()]
-    
-    cur.execute("""
-        WITH RECURSIVE graph AS (
-            -- Start from root node
-            SELECT id, 0 AS depth
-            FROM nodes
-            WHERE id = %s
-
-            UNION ALL
-
-            -- Expand neighbors only if they are in the valid subset
-            SELECT
-                CASE
-                    WHEN l.source = g.id THEN l.target
-                    ELSE l.source
-                END AS id,
-                g.depth + 1
-            FROM graph g
-            JOIN links l
-                ON (l.source = g.id OR l.target = g.id)
-            WHERE g.depth < %s
-              AND (CASE WHEN l.source = g.id THEN l.target ELSE l.source END) = ANY(%s)
-        )
-        SELECT DISTINCT id
-        FROM graph;
-    """, (node_id, max_depth, valid_node_ids))
-
-    node_ids = [row["id"] for row in cur.fetchall()]
-    if not node_ids:
-        cur.close()
-        conn.close()
-        return {"rootnode": None, "neighbors": [], "links": []}
-
-    #get all nodes in neighborhood
-    cur.execute("""
-        SELECT *
-        FROM nodes
-        WHERE id = ANY(%s)
-    """, (node_ids,))
-    nodes = cur.fetchall()
-    #get all links between these nodes
-    cur.execute("""
-        SELECT *
-        FROM links
-        WHERE source = ANY(%s)
-        AND target = ANY(%s)
-        AND comparison = %s
-    """, (node_ids, node_ids, comparison))
-    links = cur.fetchall()
-
-    cur.close()
-    conn.close()
-    return {'rootnode': rootnode,'neighbors': nodes, 'links': links}
 
 # benedikt if u see this, it's just temporary!!!! :) i'll switch to puppygraph. es tut mir leid
 def normalize_cycle(cycle):
@@ -352,8 +276,8 @@ def get_full_network(comparison: str):
             }
         }
 
-@app.get('/api/filtered_data')
-def get_filtered_network(
+
+def filter_network(
     comparison: str = None,
     sender: str = None,
     receiver: str = None,
@@ -365,8 +289,8 @@ def get_filtered_network(
     max_intrascore: float = 1.0,
     pv_thresh: float = 0.05,
     focus_on_LR: bool = False,
-    inter_dir: Literal['up', 'down'] = 'up'
-):
+    inter_dir: Literal['up', 'down'] = 'up'):
+
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     #get all potential nodes + filter by intrascore
@@ -457,9 +381,33 @@ def get_filtered_network(
         focus_ids = set(diff_lr_ids + TF_neighbors)
         filtered_nodes = [n for n in filtered_nodes if n['id'] in focus_ids]
         links = [l for l in links if l['source'] in focus_ids and l['target'] in focus_ids]
+    
+    cur.close()
+    conn.close()
 
+    return filtered_nodes, links
+
+@app.get('/api/filtered_data')
+def get_filtered_network(
+    comparison: str = None,
+    sender: str = None,
+    receiver: str = None,
+    reverse_sig: bool = False,
+    filter_intrascore: bool = False,
+    filter_pv: bool = False,
+    filter_inter: bool = False,
+    min_intrascore: float = 0.5,
+    max_intrascore: float = 1.0,
+    pv_thresh: float = 0.05,
+    focus_on_LR: bool = False,
+    inter_dir: Literal['up', 'down'] = 'up'
+):
+    nodes, links = filter_network(
+        comparison, sender, receiver, reverse_sig, filter_intrascore, filter_pv, filter_inter,
+        min_intrascore, max_intrascore, pv_thresh, focus_on_LR, inter_dir
+    )
     stats = {
-        'nNodes': len(filtered_nodes),
+        'nNodes': len(nodes),
         'nLigands': 0,
         'nReceptors': 0,
         'nTFs': 0,
@@ -470,7 +418,7 @@ def get_filtered_network(
         'unexpectedNodes': 0,
         'unexpectedLinks': 0
     }
-    for n in filtered_nodes:
+    for n in nodes:
         if n['moltype'] == "ligand":
             stats['nLigands'] += 1
         elif n['moltype'] == "receptor":
@@ -489,21 +437,112 @@ def get_filtered_network(
         else:
             stats['unexpectedLinks'] += 1
 
-    cur.close()
-    conn.close()
-
     return {
-        'nodes': filtered_nodes,
+        'nodes': nodes,
         'links': links,
         'stats': stats
     }
+
+@app.get('/api/neighborhood')
+def get_node_neighborhood(
+    root_id: str,
+    max_steps: int = 4,
+    comparison: str = None,
+    sender: str = None,
+    receiver: str = None,
+    reverse_sig: bool = False,
+    filter_intrascore: bool = False,
+    filter_pv: bool = False,
+    filter_inter: bool = False,
+    min_intrascore: float = 0.5,
+    max_intrascore: float = 1.0,
+    pv_thresh: float = 0.05,
+    focus_on_LR: bool = False,
+    inter_dir: Literal['up', 'down'] = 'up'
+):
+    root_id_int = int(root_id)
+
+    result = filter_network(
+        comparison, sender, receiver, reverse_sig, filter_intrascore, filter_pv, filter_inter,
+        min_intrascore, max_intrascore, pv_thresh, focus_on_LR, inter_dir
+    )
+
+    # filter_network can return a dict on empty result
+    if isinstance(result, dict):
+        return {'nodes': [], 'links': [], 'rootId': root_id_int}
+    nodes, links = result
+
+    adj = defaultdict(set)
+    for l in links:
+        src, tgt = l['source'], l['target']
+        adj[src].add(tgt)
+        adj[tgt].add(src)  # always add reverse: ALL LINKS AS UNDIRECTED
+
+    # BFS from root
+    visited = {root_id_int: 0}
+    queue = deque([root_id_int])
+
+    while queue:
+        current = queue.popleft()
+        dist = visited[current]
+        if dist >= max_steps:
+            continue
+        for neighbor in adj.get(current, []):
+            if neighbor not in visited:
+                visited[neighbor] = dist + 1
+                queue.append(neighbor)
+
+    neighbor_ids = list(visited.keys())
+
+    if not neighbor_ids:
+        return {'nodes': [], 'links': [], 'rootId': root_id_int}
+
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    cur.execute(
+        "SELECT * FROM nodes WHERE id = ANY(%s::integer[]) AND comparison = %s",
+        [neighbor_ids, comparison]
+    )
+    db_nodes = cur.fetchall()
+
+    nodes_out = []
+    for n in db_nodes:
+        nd = dict(n)
+        nd['distance'] = visited.get(n['id'], 999)
+        nodes_out.append(nd)
+
+    valid_ids = {n['id'] for n in nodes_out}
+
+    subgraph_links = []
+    seen_pairs = set()
+    for l in links:
+        src, tgt = l['source'], l['target']
+        if src in valid_ids and tgt in valid_ids:
+            pair = (min(src, tgt), max(src, tgt))
+            if pair not in seen_pairs:
+                seen_pairs.add(pair)
+                subgraph_links.append(dict(l))
+
+    cur.close()
+    conn.close()
+
+    print(f"Neighborhood for node {root_id_int} (comparison: {comparison}): "
+          f"{len(nodes_out)} nodes, {len(subgraph_links)} links")
+
+    return {
+        'nodes': nodes_out,
+        'links': subgraph_links,
+        'rootId': root_id_int
+    }
+
 @app.get('/api/molecules_names_list')
 def get_molecules_names_list(comparison: str, q: str = ''):
     conn = get_db_connection()
     cur = conn.cursor()
     if q:
         cur.execute(
-            """SELECT DISTINCT name, celltype, verbose_id
+            """SELECT DISTINCT name, celltype, verbose_id, id
                FROM nodes
                WHERE comparison = %s AND name ILIKE %s
                ORDER BY name ASC;""",
@@ -511,7 +550,7 @@ def get_molecules_names_list(comparison: str, q: str = ''):
         )
     else:
         cur.execute(
-            """SELECT DISTINCT name, celltype, verbose_id
+            """SELECT DISTINCT name, celltype, verbose_id, id
                FROM nodes
                WHERE comparison = %s
                ORDER BY name ASC;""",
@@ -522,7 +561,7 @@ def get_molecules_names_list(comparison: str, q: str = ''):
     conn.close()
     return {
         'molecules': [
-            {'name': r[0], 'celltype': r[1], 'verbose_id': r[2]}
+            {'name': r[0], 'celltype': r[1], 'verbose_id': r[2], 'id': r[3]}
             for r in rows
         ]
     }

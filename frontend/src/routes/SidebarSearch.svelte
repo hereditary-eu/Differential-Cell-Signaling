@@ -1,10 +1,12 @@
 <script lang="ts">
-	import { selectedComparison, highlightedNode } from '$lib/stores';
+	import { selectedComparison, highlightedNode, selectedNode, selectedNodeName } from '$lib/stores';
 
 	const backend = import.meta.env.VITE_BACKEND_URL;
 
 	let query = $state('');
-	let suggestions: { verbose_id: string; name: string; celltype: string }[] = $state([]);
+	let suggestions: { id: string; verbose_id: string; name: string; celltype: string }[] = $state(
+		[]
+	);
 	let open = $state(false);
 	let debounceTimer: ReturnType<typeof setTimeout>; //avoid reacting continuously to user typing, a bit of patience :)
 
@@ -34,10 +36,13 @@
 			open = false;
 		}
 	}
-	function select(s: { verbose_id: string; name: string; celltype: string }) {
+	function select(s: { id: string; verbose_id: string; name: string; celltype: string }) {
 		query = s.name;
 		open = false;
 		highlightedNode.set(s.verbose_id);
+		selectedNode.set(s.id);
+		selectedNodeName.set(s.name);
+		console.log('update selectedNode from SidebarSearch: ', $selectedNode, ' ', $selectedNodeName);
 	}
 	// Highlight ALL nodes sharing this name across celltypes
 	function selectAllCelltypes(name: string) {

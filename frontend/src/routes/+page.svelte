@@ -7,6 +7,7 @@
 	import NetworkCircular from './NetworkCircular.svelte';
 	import FullNetwork from './NetworkFull.svelte';
 	import VisSeparateOverview from './OverviewVis.svelte';
+	import NetworkTree from './NetworkTree.svelte';
 
 	import {
 		celltypes,
@@ -15,10 +16,12 @@
 		selectedCaseStudy,
 		selectedComparison,
 		selectedNode,
+		selectedNodeName,
 		neighborhoodData,
 		aesLRMapping,
 		aesTFMapping,
-		colorCT
+		colorCT,
+		filteringQueryStr
 	} from '$lib/stores';
 
 	const backend = import.meta.env.VITE_BACKEND_URL;
@@ -88,12 +91,14 @@
 	});
 	async function fetchNeighborhood(nodeId: string) {
 		if (!$sender || !$receiver) return;
+		console.log('selectedNode value', nodeId);
 		try {
 			const res = await fetch(
-				`${backend}/api/neighborhood?comparison=${$selectedComparison}&sender=${$sender}&receiver=${$receiver}&node_id=${nodeId}`
+				`${backend}/api/neighborhood?root_id=${nodeId}&max_steps=4&${$filteringQueryStr}`
 			);
 			const data = await res.json();
 			neighborhoodData.set(data);
+			console.log($neighborhoodData);
 		} catch (err) {
 			console.error('Error fetching neighborhood data:', err);
 		}
@@ -204,25 +209,27 @@
 			</div>
 		</aside>
 		<main class="flex-grow-1 p-4" id="graph-area">
-		<div style="display: flex; align-items: flex-start; gap: 1%; width: 100%;">
-			<!-- full net -->
-			<div class="card border-primary mb-3" 
-			style="width: 60%; height: 550px; display: flex; flex-direction: column;">
-				<p class="card-header">Full Network for {$selectedCaseStudy} : {$selectedComparison}</p>
-				<div style="flex: 1; min-height: 0; overflow-y: auto;">
-				<FullNetwork {fullNet} />
+			<div style="display: flex; align-items: flex-start; gap: 1%; width: 100%;">
+				<!-- full net -->
+				<div
+					class="card border-primary mb-3"
+					style="width: 60%; height: 550px; display: flex; flex-direction: column;"
+				>
+					<p class="card-header">Full Network for {$selectedCaseStudy} : {$selectedComparison}</p>
+					<div style="flex: 1; min-height: 0; overflow-y: auto;">
+						<FullNetwork {fullNet} />
+					</div>
 				</div>
-			</div>
 
-			<div
-				class="card border-primary mb-3"
-				style="width: 39%; height: 550px; display: flex; flex-direction: column;"
-			>
-				<p class="card-header">Overview </p>
-				<div style="flex: 1; min-height: 0; overflow-y: auto">
-				<VisSeparateOverview {fullNet} maxHeight={480} />
+				<div
+					class="card border-primary mb-3"
+					style="width: 39%; height: 550px; display: flex; flex-direction: column;"
+				>
+					<p class="card-header">Overview</p>
+					<div style="flex: 1; min-height: 0; overflow-y: auto">
+						<VisSeparateOverview {fullNet} maxHeight={480} />
+					</div>
 				</div>
-			</div>
 			</div>
 			<!-- filtered sender-receiver net -->
 			<div style="display: flex; align-items: flex-start; gap: 1%; width: 100%;">
@@ -289,13 +296,13 @@
 						</div>
 					</div>
 				</div>
-				<div 
-				class="card border-primary mb-3"
-				style="width: 39%; height: 550px; display: flex; flex-direction: column;">
-					<p class="card-header">Deatiled Tree </p>
-					{#if $selectedNode}
-						<!-- keeps complaining about possibility of being null -->
-						<!-- <NetworkTree neighborhoodData={$neighborhoodData} /> -->
+				<div
+					class="card border-primary mb-3"
+					style="width: 39%; height: 550px; display: flex; flex-direction: column;"
+				>
+					{#if $selectedNodeName}
+						<p class="card-header">Detailed Tree for {$selectedNodeName}</p>
+						<NetworkTree neighborhoodData={$neighborhoodData} maxHeight={480} />
 					{/if}
 				</div>
 			</div>

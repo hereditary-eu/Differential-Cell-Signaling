@@ -1,12 +1,17 @@
 // define here the common variables and functions for network visualizations
 import * as d3 from 'd3';
 
-// export variables and function to define dimension of plot, zoom behavior and initial position with initial zoom level
 export const width = 250;
 export const height = 200;
 const initialScale = 0.18;
 const initialX = width / 2;
 const initialY = height / 2.4;
+
+const NODE_SIZES = {
+	TF: { base: 7, highlight: 12 },
+	ligand: { base: 80, highlight: 200 },
+	receptor: { base: 12, highlight: 18 }
+};
 
 export interface ZoomOptions {
     scaleExtent?: [number, number];
@@ -37,24 +42,23 @@ export function zoomBehavior(
 export function drawNode(
     selection: d3.Selection<any, any, any, any>,
     colorScale: d3.ScaleOrdinal<string, string, string>,
-    color: boolean
+    color: boolean,
+    nodeSize = NODE_SIZES
 ) {
 		selection.each(function (d: any) {
 			const g = d3.select(this);
 			if (d.moltype === 'TF') {
-				g.append('circle').attr('r', 7).attr('fill', color ? colorScale(d.celltype): '#a9a9a9');
+				g.append('circle').attr('r', NODE_SIZES.TF.base).attr('fill', color ? colorScale(d.celltype): '#a9a9a9');
 			} else if (d.moltype === 'ligand') {
-				const size = 80;
 				g.append('path')
-					.attr('d', d3.symbol().type(d3.symbolTriangle).size(size))
+					.attr('d', d3.symbol().type(d3.symbolTriangle).size(NODE_SIZES.ligand.base))
 					.attr('fill', color ? colorScale(d.celltype): '#a9a9a9');
 			} else if (d.moltype === 'receptor') {
-				const side = 12;
 				g.append('rect')
-					.attr('x', -side / 2)
-					.attr('y', -side / 2)
-					.attr('width', side)
-					.attr('height', side)
+					.attr('x', -NODE_SIZES.receptor.base / 2)
+					.attr('y', -NODE_SIZES.receptor.base / 2)
+					.attr('width', NODE_SIZES.receptor.base)
+					.attr('height', NODE_SIZES.receptor.base)
 					.attr('fill', color ? colorScale(d.celltype): '#a9a9a9');
 			}
 		});
@@ -322,16 +326,34 @@ export function defineMarkers(
 			.attr('stroke-width', 2);
     }
 
+export function resetNodesSize (nodeSelection: any, nodeSize = NODE_SIZES) {
+        nodeSelection.select('circle').attr('r', nodeSize.TF.base);
+        nodeSelection.selectAll('rect')
+                .attr('width', nodeSize.receptor.base)
+                .attr('width', nodeSize.receptor.base)
+                .attr('x', -nodeSize.receptor.base/2)
+                .attr('y', -nodeSize.receptor.base/2);
+        nodeSelection.selectAll('path')
+            .attr('d', d3.symbol().type(d3.symbolTriangle).size(nodeSize.ligand.base));
+        return;
+}
 //this is the highlight called when node is searched by SidebarSearch
-export function applyHighlightSearch(value: string | null, nodeSelection: any, linkSelection: any, networkData: any) {
+export function applyHighlightSearch(
+    value: string | null, 
+    nodeSelection: any, 
+    linkSelection: any, 
+    networkData: any,
+    nodeSize = NODE_SIZES
+) {
 		if (!nodeSelection) return;
-		if (!value) {
+		if (!value) { //reset
 			nodeSelection.attr('opacity', 1);
 			linkSelection?.attr('opacity', 1);
-			return;
+            resetNodesSize(nodeSelection, nodeSize);
+            return;
 		}
-		let matchIds: Set<string>;
 
+		let matchIds: Set<string>;
 		if (value.startsWith('name:')) {
 			// Match all nodes sharing this molecule name
 			const name = value.slice(5);
@@ -339,17 +361,25 @@ export function applyHighlightSearch(value: string | null, nodeSelection: any, l
 				(networkData?.nodes ?? []).filter((n: any) => n.name === name).map((n: any) => n.id)
 			);
 		} else {
-			// Match exact verbose_id (name__celltype) → single node
+			// Match exact verbose_id (name__celltype) to single node
 			matchIds = new Set(
 				(networkData?.nodes ?? []).filter((n: any) => n.verbose_id === value).map((n: any) => n.id)
 			);
 		}
 		nodeSelection.attr('opacity', (d: any) => (matchIds.has(d.id) ? 1 : 0.15));
-		// linkSelection?.attr(
-		// 	'opacity',
-		// 	(d: any) => matchIds.has(d.source?.id ?? d.source) || matchIds.has(d.target?.id ?? d.target)
-		// )
-		// 	? 0.7
-		// 	: 0.04;
 		linkSelection?.attr('opacity', 0.15);
+
+        // increase size
+        nodeSelection.each(function(d: any) {
+            const g = d3.select(this);
+            const isMatch = matchIds.has(d.id);
+            if (d.moltype === 'TF') {
+                g.select('circle').attr('r', isMatch ? nodeSize.TF.highlight : nodeSize.TF.base);
+            } else if (d.moltype === 'ligand') {
+                g.select('path').attr('d', d3.symbol().type(d3.symbolTriangle).size(isMatch ? nodeSize.ligand.highlight : nodeSize.ligand.base));
+            } else if (d.moltype === 'receptor') {
+                const side = isMatch ? nodeSize.receptor.highlight : nodeSize.receptor.base;
+                g.select('rect').attr('width',side).attr('height', side).attr('x', -side/2).attr('y', -side/2);
+            }
+        });
 	}

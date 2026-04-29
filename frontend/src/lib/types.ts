@@ -3,7 +3,7 @@ export interface Node {
 		name: string;
 		celltype: string;
 		moltype?: string;
-		[other: string]: any; // catch-all for extra properties
+		[other: string]: any; // extra properties
 	}
 export interface Link {
 		source: string | number;
@@ -13,12 +13,8 @@ export interface Link {
 		comparison?: string;
 		[other: string]: any;
 	}
-export interface TreeNode extends Node {
-		children?: TreeNode[];
-		depth?: number; // optional distance from root
-	}
 export interface NeighborhoodData {
-		rootnode: Node;
-		neighbors: Node[];
+		rootId: number;
+		nodes: Node[];
 		links: Link[];
 	}

@@ -9,7 +9,9 @@
 		aesLRMapping,
 		aesTFMapping,
 		colorCT,
-		highlightedNode
+		highlightedNode,
+		selectedNode,
+		selectedNodeName
 	} from '$lib/stores';
 	import {
 		zoomBehavior,
@@ -188,7 +190,11 @@
 			.data(nodes)
 			.join('g')
 			.call((sel) => drawNode(sel, $colorScale, $colorCT))
-			.on('click', (event: any, d: { id: string }) => highlightNode(d.id, links, node, link));
+			.on('click', (event: any, d: { id: string; name: string }) => {
+				selectedNode.set(d.id);
+				selectedNodeName.set(d.name);
+				highlightNode(d.id, links, node, link);
+			});
 
 		svg.on('click', (event) => {
 			if (event.target === svg.node()) {
@@ -387,7 +393,15 @@
 				})
 		);
 		console.log('COLORCT ', $colorCT);
-		drawLegend(svgContainer, $colorScale, $aesLRMapping, $aesTFMapping, $sender, $receiver, $colorCT);
+		drawLegend(
+			svgContainer,
+			$colorScale,
+			$aesLRMapping,
+			$aesTFMapping,
+			$sender,
+			$receiver,
+			$colorCT
+		);
 		nodeSelection = node;
 		linkSelection = link;
 		// apply highlight after re-render

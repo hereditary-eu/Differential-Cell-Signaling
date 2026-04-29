@@ -11,18 +11,21 @@
 		aesEdge,
 		trimPath,
 		defineMarkers,
-		applyHighlightSearch
+		applyHighlightSearch,
+
+		resetNodesSize
+
 	} from './utils';
 	import {
 		colorScale,
 		selectedNode,
+		selectedNodeName,
 		highlightedNode,
 		aesLRMapping,
 		aesTFMapping,
 		colorCT,
 		sender,
 		receiver
-
 	} from '$lib/stores';
 
 	export let networkData: { nodes: any[]; links: any[] };
@@ -91,11 +94,11 @@
 			.selectAll('g')
 			.data(nodes)
 			.join('g')
-			.join('g')
 			.call((selection) => drawNode(selection, $colorScale, $colorCT)) // map shape to moltype
-			.on('click', (event: any, d: { id: string }) => {
+			.on('click', (event: any, d: { id: string; name: string }) => {
+				selectedNode.set(d.id);
+				selectedNodeName.set(d.name);
 				highlightNode(d.id, links, node, link);
-				// selectedNode.set(d.id);
 			});
 		node.call(
 			d3.drag<any, any>().on('drag', (e, d) => {
@@ -111,6 +114,7 @@
 			if (event.target === svg.node()) {
 				node.attr('opacity', 1);
 				link.attr('opacity', 1);
+				resetNodesSize(nodeSelection)
 			}
 		});
 
@@ -142,8 +146,16 @@
 			});
 			node.attr('transform', (d: any) => `translate(${d.x}, ${d.y})`);
 		});
-		
-		drawLegend(svgContainer, $colorScale, $aesLRMapping, $aesTFMapping, $sender, $receiver, $colorCT);
+
+		drawLegend(
+			svgContainer,
+			$colorScale,
+			$aesLRMapping,
+			$aesTFMapping,
+			$sender,
+			$receiver,
+			$colorCT
+		);
 		// apply highlight after re-render
 		applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
 	} //end of renderNetwork()

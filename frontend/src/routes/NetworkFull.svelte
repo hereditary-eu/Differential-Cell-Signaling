@@ -2,7 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
 
-	export let fullNet: { nodes: any[]; links: any[]; stats?: any; };
+	export let fullNet: { nodes: any[]; links: any[]; stats?: any };
 
 	let svgEl: SVGSVGElement;
 	let simulation: d3.Simulation<any, undefined>;
@@ -26,11 +26,9 @@
 			? fullNet.stats.b_outlierThreshold
 			: fullNet.stats.p_outlierThreshold;
 	}
-	function getTopMols(key : 'betweenness' | 'pagerank') {
+	function getTopMols(key: 'betweenness' | 'pagerank') {
 		if (!fullNet?.stats) return undefined;
-		return key === 'betweenness'
-			? fullNet.stats.b_topMols
-			: fullNet.stats.p_topMols;
+		return key === 'betweenness' ? fullNet.stats.b_topMols : fullNet.stats.p_topMols;
 	}
 	function drawLegendAndViolin(
 		svg: d3.Selection<SVGSVGElement, unknown, null, undefined>,
@@ -175,18 +173,25 @@
 
 		// y-axis (right side of violin)
 		const axis = d3.axisRight(yScale).ticks(4).tickFormat(d3.format('.2~e'));
-		
-		const rowH = 16, rowGap = 6;
+
+		const rowH = 16,
+			rowGap = 6;
 		g.append('text')
 			.text('Top 5 Molecules:')
 			.attr('y', violinH + VPAD_TOP + VPAD_BOT * 7);
-		const rows = g.selectAll('.mol-row')
-			.data(topMols).join('g')
+		const rows = g
+			.selectAll('.mol-row')
+			.data(topMols)
+			.join('g')
 			.attr('class', 'mol-row')
-			.attr('transform', (d, i) => `translate(0, ${violinH + VPAD_TOP + VPAD_BOT * 7 + 18 + i * (rowH + rowGap)})`);
-		rows.append('text')
-			.attr('y', rowH /2)
-			.text((d, i ) => ` ${i+1}. ${d}`);
+			.attr(
+				'transform',
+				(d, i) => `translate(0, ${violinH + VPAD_TOP + VPAD_BOT * 7 + 18 + i * (rowH + rowGap)})`
+			);
+		rows
+			.append('text')
+			.attr('y', rowH / 2)
+			.text((d, i) => ` ${i + 1}. ${d}`);
 
 		g.append('g')
 			.attr('transform', `translate(${cx + halfW - 14}, 0)`)
@@ -195,7 +200,6 @@
 				ax.selectAll('text').attr('font-size', '12px').attr('fill', '#888');
 				ax.selectAll('line,path').attr('stroke', '#ccc');
 			});
-		
 	}
 
 	function render() {
