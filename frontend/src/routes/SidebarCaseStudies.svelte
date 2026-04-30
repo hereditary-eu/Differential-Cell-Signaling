@@ -139,7 +139,7 @@
 		opacity: 0;
 		pointer-events: none;
 		transition: opacity 0.2s;
-
+		
 		background: #333;
 		color: white;
 		padding: 6px 10px;

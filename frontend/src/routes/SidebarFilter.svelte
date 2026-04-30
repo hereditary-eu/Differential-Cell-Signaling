@@ -181,7 +181,7 @@
 	</div>
 	{#if filterPv}
 		<div>
-			<label for="pv-thresh">p-value threshold: {pvThresh}</label>
+			<label for="pv-thresh">p-value threshold: </label>
 			<input
 				id="pv-thresh"
 				type="number"

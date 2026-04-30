@@ -283,7 +283,7 @@ export function drawLegend(
                 }
             }
 }
-export function trimPath(source: { x: number; y: number }, target: { x: number; y: number }, r = 10) {
+export function trimPath(source: { x: number; y: number }, target: { x: number; y: number }, r = 12) {
 			const dx = target.x - source.x;
 			const dy = target.y - source.y;
 			const dist = Math.sqrt(dx * dx + dy * dy);
@@ -370,7 +370,7 @@ export function applyHighlightSearch(
 		linkSelection?.attr('opacity', 0.15);
 
         // increase size
-        nodeSelection.each(function(d: any) {
+		nodeSelection.each(function (this: SVGGElement, d: any) {
             const g = d3.select(this);
             const isMatch = matchIds.has(d.id);
             if (d.moltype === 'TF') {
@@ -382,4 +382,67 @@ export function applyHighlightSearch(
                 g.select('rect').attr('width',side).attr('height', side).attr('x', -side/2).attr('y', -side/2);
             }
         });
+	}
+
+ 	// TF nodes are merged if identical sets of:
+	//   - outgoing links (same target id + weight)
+	//   - incoming links (same source id + weight)
+export	function deduplicateTFs(rawNodes: any[], rawLinks: any[]): { nodes: any[]; links: any[] } {
+		const tfNodes = rawNodes.filter((n) => n.moltype === 'TF');
+		const nonTFNodes = rawNodes.filter((n) => n.moltype !== 'TF');
+
+		// signature for each TF node
+		const getId = (x: any) => (typeof x === 'object' && x !== null ? x.id : x);
+
+        const sig = (n: any): string => {
+            const out = rawLinks
+                .filter((l) => getId(l.source) === n.id)
+                .map((l) => `o:${getId(l.target)}:${l.weight}`)
+                .sort()
+                .join('|');
+            const inc = rawLinks
+                .filter((l) => getId(l.target) === n.id)
+                .map((l) => `i:${getId(l.source)}:${l.weight}`)
+                .sort()
+                .join('|');
+            return `${n.celltype}__${out}__${inc}`;  // also fixes the celltype bug
+        };
+		// Group TFs by signature
+		const groups = new Map<string, any[]>();
+		for (const n of tfNodes) {
+			const s = sig(n);
+			if (!groups.has(s)) groups.set(s, []);
+			groups.get(s)!.push(n);
+		}
+		// For each group, keep one representative node; record all names
+		const mergedTFs: any[] = [];
+		// Map from old id to representative id
+		const idMap = new Map<number, number>();
+		for (const [, members] of groups) {
+			const rep = { ...members[0] }; // representative node
+			rep._mergedNames = members.map((m) => m.name);
+			rep._mergedCount = members.length;
+			rep._mergedIds = members.map((m) => m.id);
+			mergedTFs.push(rep);
+			for (const m of members) idMap.set(m.id, rep.id);
+		}
+
+		const remappedLinks = rawLinks.map((l) => ({
+            ...l,
+            source: idMap.get(getId(l.source)) ?? getId(l.source),
+            target: idMap.get(getId(l.target)) ?? getId(l.target),
+        }));
+
+		const seenLinks = new Set<string>();
+		const dedupedLinks = remappedLinks.filter((l) => {
+			const k = `${l.source}-${l.target}-${l.type}-${l.weight}`;
+			if (seenLinks.has(k)) return false;
+			seenLinks.add(k);
+			return true;
+		});
+
+		return {
+			nodes: [...nonTFNodes, ...mergedTFs],
+			links: dedupedLinks
+		};
 	}

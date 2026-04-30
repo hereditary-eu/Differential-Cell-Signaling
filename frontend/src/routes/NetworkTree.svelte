@@ -6,15 +6,40 @@
 		colorScale,
 		reverseSig,
 		selectedNode,
-		selectedNodeName
+		selectedNodeName,
+		neighborhoodData,
+		filteringQueryStr
 	} from '$lib/stores';
-	import { aesEdge, drawNode, defineMarkers, drawLegend, trimPath } from './utils';
+	import { aesEdge, drawNode, defineMarkers, trimPath, deduplicateTFs } from './utils';
+	import GroupToggle from './GroupToggle.svelte';
 
-	export let neighborhoodData: {
-		nodes: any[];
-		links: any[];
-		rootId: number;
-	};
+	let groupNodes = $state(true);
+	let isHorizontal = $state(false);
+	let maxSteps = $state(4);
+
+	const backend = import.meta.env.VITE_BACKEND_URL;
+
+	// update selectedNode and pass neighboorhoodData to detailed view
+	$effect(() => {
+		if ($selectedNode) {
+			console.log('CALLING fetchNeighborhood')
+			fetchNeighborhood($selectedNode);
+		}
+	});
+	async function fetchNeighborhood(nodeId: string) {
+		if (!$sender || !$receiver) return;
+		console.log('selectedNode value', nodeId);
+		try {
+			const res = await fetch(
+				`${backend}/api/neighborhood?root_id=${nodeId}&max_steps=${maxSteps}&${$filteringQueryStr}`
+			);
+			const data = await res.json();
+			neighborhoodData.set(data);
+			console.log($neighborhoodData);
+		} catch (err) {
+			console.error('Error fetching neighborhood data:', err);
+		}
+	}
 
 	let svgContainer: SVGSVGElement;
 	let containerDiv: HTMLDivElement;
@@ -33,90 +58,32 @@
 		return 1.5;
 	}
 
-	// TF nodes are merged if identical sets of:
-	//   - outgoing links (same target id + weight)
-	//   - incoming links (same source id + weight)
-	function deduplicateTFs(rawNodes: any[], rawLinks: any[]): { nodes: any[]; links: any[] } {
-		const tfNodes = rawNodes.filter((n) => n.moltype === 'TF');
-		const nonTFNodes = rawNodes.filter((n) => n.moltype !== 'TF');
-
-		// signature for each TF node
-		const sig = (n: any): string => {
-			const out = rawLinks
-				.filter((l) => l.source === n.id)
-				.map((l) => `o:${l.target}:${l.weight}`)
-				.sort()
-				.join('|');
-			const inc = rawLinks
-				.filter((l) => l.target === n.id)
-				.map((l) => `i:${l.source}:${l.weight}`)
-				.sort()
-				.join('|');
-			return `${out}__${inc}`;
-		};
-		// Group TFs by signature
-		const groups = new Map<string, any[]>();
-		for (const n of tfNodes) {
-			const s = sig(n);
-			if (!groups.has(s)) groups.set(s, []);
-			groups.get(s)!.push(n);
-		}
-		// For each group, keep one representative node; record all names
-		const mergedTFs: any[] = [];
-		// Map from old id to representative id
-		const idMap = new Map<number, number>();
-
-		for (const [, members] of groups) {
-			const rep = { ...members[0] }; // representative node
-			rep._mergedNames = members.map((m) => m.name);
-			rep._mergedCount = members.length;
-			rep._mergedIds = members.map((m) => m.id);
-			mergedTFs.push(rep);
-			for (const m of members) idMap.set(m.id, rep.id);
-		}
-
-		// Remap links, then deduplicate identical remapped links
-		const remappedLinks = rawLinks.map((l) => ({
-			...l,
-			source: idMap.get(l.source) ?? l.source,
-			target: idMap.get(l.target) ?? l.target
-		}));
-
-		const seenLinks = new Set<string>();
-		const dedupedLinks = remappedLinks.filter((l) => {
-			const k = `${l.source}-${l.target}-${l.type}-${l.weight}`;
-			if (seenLinks.has(k)) return false;
-			seenLinks.add(k);
-			return true;
-		});
-
-		return {
-			nodes: [...nonTFNodes, ...mergedTFs],
-			links: dedupedLinks
-		};
-	}
-
 	function renderTree() {
-		if (!neighborhoodData?.nodes?.length || !neighborhoodData?.rootId) return;
+		if (!$neighborhoodData?.nodes?.length || !$neighborhoodData?.rootId) return;
 
 		const W = containerDiv?.clientWidth || 600;
 		const H = containerDiv?.clientHeight || 500;
 
-		const PADDING = 100;
+		const PADDING = 20;
 		const numRanks = $reverseSig ? 4 : 6;
-		const yForRank = (rank: number) => PADDING + (rank / (numRanks - 1)) * (H - PADDING * 3); // + d3.randomUniform(-4, 4)();
+		
+		const rankToFixed = (rank: number) =>
+			isHorizontal
+			? PADDING + (rank / (numRanks-1)) * (W - PADDING * 1.5 )
+			: PADDING + (rank / (numRanks-1)) * (H - PADDING * 1.5 );
+		
+		const { nodes: dedupNodes, links: dedupLinks } = groupNodes
+	  		? deduplicateTFs($neighborhoodData.nodes, $neighborhoodData.links)
+  			: { nodes: $neighborhoodData.nodes, links: $neighborhoodData.links };
 
-		// Deduplicate TFs
-		const { nodes: dedupNodes, links: dedupLinks } = deduplicateTFs(
-			neighborhoodData.nodes,
-			neighborhoodData.links
-		);
-
-		// Attach fy
-		const nodes = dedupNodes.map((d) => ({
-			...d,
-			fy: yForRank(getYRank(d))
-		}));
+		// Attach fixed direction
+		const nodes = dedupNodes.map((d) => {
+			const rank = getYRank(d);
+			return isHorizontal
+				? {...d, fx: rankToFixed(getYRank(d))}
+				: {...d, fy: rankToFixed(getYRank(d))}
+			
+		});
 		const links = dedupLinks.map((d) => ({ ...d }));
 
 		d3.select(svgContainer).selectAll('*').remove();
@@ -146,13 +113,10 @@
 
 		const simulation = d3
 			.forceSimulation(nodes)
-			.force(
-				'link',
-				d3.forceLink(simLinks).id((d: any) => d.id)
-				// .distance(80)
-			)
+			.force('link', d3.forceLink(simLinks).id((d: any) => d.id) )
 			.force('charge', d3.forceManyBody().strength(-80).distanceMax(50))
-			.force('x', d3.forceX(W / 2).strength(0.1))
+			.force('x', isHorizontal ? d3.forceX(W / 2).strength(0) : d3.forceX(W / 2).strength(0.1))
+			.force('y', isHorizontal ? d3.forceY(H / 2).strength(0.1) : null as any)
 			.force('collide', d3.forceCollide(15));
 
 		const linkSel = zoomLayer
@@ -179,8 +143,9 @@
 
 		nodeSel
 			.append('text')
-			.attr('text-anchor', 'middle')
-			.attr('dy', '2em') // below the node shape
+			.attr('text-anchor', isHorizontal ? 'end' : 'middle')
+			.attr('dx', isHorizontal ? '-0.8em' : '0em')
+			.attr('dy', isHorizontal ? '-0.4em' : '2em') 
 			.attr('font-size', '9px')
 			.attr('color', '#000000')
 			.attr('stroke', '#000000')
@@ -203,15 +168,16 @@
 			d3
 				.drag<any, any>()
 				.on('start', (e, d) => {
-					if (!e.active) simulation.alphaTarget(0.3).restart();
-					d.fx = d.x;
+					if (isHorizontal) d.fy = d.y;
+					else d.fx = d.x;
 				})
 				.on('drag', (e, d) => {
-					d.fx = e.x;
+					if (isHorizontal) d.fy = e.y;
+					else d.fx = e.x;
 				})
 				.on('end', (e, d) => {
-					if (!e.active) simulation.alphaTarget(0);
-					d.fx = null;
+					if (isHorizontal) d.fy = null;
+					else d.fx = null;
 				})
 		);
 
@@ -265,12 +231,71 @@
 			const ty = H / 2 - scale * (box.y + box.height / 2);
 			svg.call(zoom.transform as any, d3.zoomIdentity.translate(tx, ty).scale(scale));
 		});
-		// drawLegend(svgContainer, $colorScale, 'volcano', 'endShape', $sender, $receiver, true);
 	}
 
-	$: if (neighborhoodData) renderTree();
+	$effect(() => { if ($neighborhoodData || maxSteps || groupNodes !== undefined) renderTree(); });
 </script>
 
-<div bind:this={containerDiv} style="width: 100%; height: 100%;">
-	<svg bind:this={svgContainer} style="width: 100%; height: 100%;"></svg>
+<div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden;">
+	<div style="
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 8px;
+		padding: 4px 8px;
+		flex-shrink: 0;
+		border-bottom: 1px solid #e5e5e5;
+		background: white;
+		z-index: 10;
+	">
+		<label for="input-maxSteps" style="font-size: 11px; margin: 0; white-space: nowrap;">max steps:</label>
+		<input
+			id="input-maxSteps"
+			type="number"
+			bind:value={maxSteps}
+			min="1"
+			max="5"
+			style="
+				width: 52px;
+				padding: 2px 6px;
+				font-size: 11px;
+				border: 1px solid #ccc;
+				border-radius: 4px;
+			"
+		/>
+		<button
+			onclick={() => { isHorizontal = !isHorizontal; }}
+			style="
+				padding: 2px 8px;
+				font-size: 11px;
+				border: 1px solid #ccc;
+				border-radius: 4px;
+				background: white;
+				cursor: pointer;
+				display: flex;
+				align-items: center;
+				gap: 4px;
+			"
+			title="Toggle layout orientation"
+		>
+			{#if isHorizontal}
+				<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+					<line x1="7" y1="1" x2="7" y2="13"/>
+					<line x1="3" y1="4" x2="7" y2="1"/><line x1="11" y1="4" x2="7" y2="1"/>
+				</svg>
+				Vertical
+			{:else}
+				<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+					<line x1="1" y1="7" x2="13" y2="7"/>
+					<line x1="10" y1="3" x2="13" y2="7"/><line x1="10" y1="11" x2="13" y2="7"/>
+				</svg>
+				Horizontal
+			{/if}
+		</button>
+		<GroupToggle bind:checked={groupNodes} label="Group TFs" />
+
+	</div>
+	<div bind:this={containerDiv} style="flex: 1; min-height: 0; width: 100%;">
+		<svg bind:this={svgContainer} style="width: 100%; height: 100%; display: block;"></svg>
+	</div>
 </div>

@@ -27,7 +27,10 @@ export const selectedComparison = writable('');
 export const selectedNode = writable('');
 export const selectedNodeName = writable('');
 export const neighborhoodData = writable(<NeighborhoodData | null>null);
-export const aesLRMapping = writable<'reset' | 'viridis' | 'volcano'>('reset');
-export const aesTFMapping = writable<'reset' | 'endShape'>('reset');
-export const colorCT = writable(true);
+export const aesSettings = writable({
+    LR: <'reset' | 'viridis' | 'volcano'>('reset'),
+    TF: <'reset' | 'endShape'>('reset'),
+    CT: <boolean>(true),
+    groupNodes: <boolean>(false)
+})
 export const highlightedNode = writable<string | null>(null);

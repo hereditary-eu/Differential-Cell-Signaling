@@ -6,46 +6,40 @@
 		receiver,
 		reverseSig,
 		colorScale,
-		aesLRMapping,
-		aesTFMapping,
-		colorCT,
+		aesSettings,
 		highlightedNode,
 		selectedNode,
 		selectedNodeName
 	} from '$lib/stores';
 	import {
 		zoomBehavior,
-		width,
-		height,
 		drawNode,
 		highlightNode,
-		drawLegend,
+		deduplicateTFs,
 		aesEdge,
 		defineMarkers,
 		trimPath,
 		applyHighlightSearch
 	} from './utils';
-
+	import DrawNetLegend from './drawNetLegend.svelte';
 	export let networkData: { nodes: any[]; links: any[] };
 
 	let svgContainer: SVGSVGElement;
 	let simulation: d3.Simulation<any, undefined>;
-	//handle search-based hihlighting
-	//handle highligthing the node selected with SidebarSearch
+	let containerDiv: HTMLDivElement;
+
 	let nodeSelection: any = null;
 	let linkSelection: any = null;
 
-	// These survive re-renders
 	let ringRadii: number[] = []; // current radius for each ring (px)
 	let ringRotations: number[] = []; // cumulative rotation offset per ring (radians)
-	// For each node: its angular position relative to its ring's rotation origin.
-	//   absolute_angle = nodeBaseAngle[id] + ringRotations[ringIndex]
-	// During rotation, ringRotations[i] changes while nodeBaseAngle doesn't
-	// So that relative position of nodes stays intact
+
 	const nodeBaseAngle = new Map<string, number>();
 
-	const cx = () => width / 2;
-	const cy = () => height / 2;
+	let _W = 600;
+	let _H = 500;
+	const cx = () => _W / 2;
+	const cy = () => _H / 2;
 
 	function ringCount(): number {
 		return $reverseSig ? 6 : 4;
@@ -63,7 +57,6 @@
 		return -1;
 	}
 
-	// Place node at (baseAngle + ringRotation) on its ring
 	function projectNode(d: any) {
 		const ri = ringIndexOf(d);
 		if (ri < 0) return; // nodes with unexpected moltype-ct combination will not be included...
@@ -78,7 +71,7 @@
 	}
 	function linkPath(d: any): string {
 		const end =
-			d.type === 'TFL' && $aesTFMapping === 'endShape'
+			d.type === 'TFL' && $aesSettings.TF === 'endShape'
 				? trimPath(d.source, d.target, 10)
 				: { x: d.target.x, y: d.target.y };
 		const dx = end.x - d.source.x;
@@ -88,22 +81,37 @@
 	}
 
 	const renderNetwork = () => {
-		if (!svgContainer) return;
+		if (!svgContainer || !containerDiv) return;
 		if (!networkData?.nodes?.length) return;
 		simulation?.stop();
-
+		
+		_W = containerDiv.clientWidth || 600;
+ 		_H = containerDiv.clientHeight || 500;
+		
 		const n = $sender === $receiver ? 3 : ringCount();
-		// Reset ring state only when ring count changes (for reverseSig)
+		
 		if (ringRadii.length !== n) {
-			ringRadii = Array.from({ length: n }, (_, i) => 130 + i * 110);
+			const minDim = Math.min(_W, _H);
+			const step = (minDim * 0.48) / n;           // outermost ring ≈ 48% of shortest side
+			ringRadii = Array.from({ length: n }, (_, i) => minDim * 0.08 + i * step);
 			ringRotations = new Array(n).fill(0);
 			nodeBaseAngle.clear();
 		}
 
-		const nodes = networkData.nodes.map((d) => ({ ...d }));
-		const links = networkData.links.map((d) => ({ ...d }));
+		const safeNodes = networkData.nodes.map((d) => ({ ...d, x: undefined, y: undefined }));
+		const safeLinks = networkData.links.map((l) => ({
+			...l,
+			source: typeof l.source === 'object' ? l.source.id : l.source,
+			target: typeof l.target === 'object' ? l.target.id : l.target,
+		}));
 
-		// Seed positions: reuse stored layout when possible, random otherwise
+		const { nodes: rawNodes, links: rawLinks } = $aesSettings.groupNodes
+			? deduplicateTFs(safeNodes, safeLinks)
+			: { nodes: safeNodes, links: safeLinks };
+
+		const nodes = rawNodes.map((d: any) => ({ ...d }));
+		const links = rawLinks.map((d: any) => ({ ...d }));
+
 		nodes.forEach((d) => {
 			const ri = ringIndexOf(d);
 			if (ri < 0) return;
@@ -116,25 +124,30 @@
 				projectNode(d);
 			}
 		});
+		
+		const nodeById = new Map(nodes.map((n) => [n.id, n]));
+		const simLinks = links.map((l: any) => ({
+			...l,
+			source: nodeById.get(typeof l.source === 'object' ? l.source.id : l.source) ?? l.source,
+			target: nodeById.get(typeof l.target === 'object' ? l.target.id : l.target) ?? l.target,
+		}));
 
 		const svg = d3.select(svgContainer);
 		d3.select(svgContainer).selectAll('g').remove();
 		d3.select(svgContainer).selectAll('path').remove();
 
 		svg
-			.attr('viewBox', [0, 0, width, height])
+			.attr('viewBox', [0, 0, _W, _H])
 			.style('background', 'transparent')
 			.style('cursor', 'grab');
 
 		defineMarkers(svg); //still not working
-		// if switched tab positions, defineMarkers works and doesnt work in NetworkGraphZoom moved to second tab
-		// seems to be due to svg dimensions initialized to zero(?)
+		
 		const zoomLayer = svg.append('g').attr('class', 'zoom-layer');
-		const { zoom, initialTransform } = zoomBehavior(zoomLayer);
+		const { zoom } = zoomBehavior(zoomLayer);
 		svg.call(zoom as any);
-		svg.call(zoom.transform as any, initialTransform);
+		svg.call(zoom.transform as any, d3.zoomIdentity);
 
-		// ── circles ─────────────────────────────────────────────────────────
 		const circleGroup = zoomLayer.append('g').attr('class', 'guide-circles');
 		function syncCircles() {
 			circleGroup
@@ -146,54 +159,44 @@
 				.attr('fill', 'none')
 				.attr('stroke', '#ababab')
 				.attr('stroke-dasharray', '4 4')
-				.attr('stroke-width', 2)
+				.attr('stroke-width', 1.5)
 				.attr('r', (i) => ringRadii[i]);
 		}
 		syncCircles();
 
 		simulation = d3
 			.forceSimulation(nodes)
-			.force(
-				'link',
-				d3
-					.forceLink(links)
+			.force('link', d3
+					.forceLink(simLinks)
 					.id((d: any) => d.id)
 					.strength(0.1)
 			)
 			.force('charge', d3.forceManyBody().strength(-23))
-			.force(
-				'collide',
-				d3.forceCollide((d: any) => 14)
-			)
+			.force('collide', d3.forceCollide((d: any) => 14))
 			.force('center', d3.forceCenter(cx(), cy()));
 
 		const link = zoomLayer
 			.append('g')
 			.attr('fill', 'none')
 			.attr('stroke-opacity', 0.9)
-			.attr('stroke-width', 1.5)
+			.attr('stroke-width', 1)
 			.selectAll('path')
-			.data(links)
+			.data(simLinks)
 			.join('path');
-		// .call((sel) => aesEdge(sel, $aesLRMapping, $aesTFMapping));
-		// link.call((sel) => aesEdge(sel, $aesLRMapping, $aesTFMapping));
-		// debug:
-		// link.each(function (d: any) {
-		// 	const el = d3.select(this);
-		// 	console.log('type:', d.type, 'marker-end:', el.attr('marker-end'), 'd:', el.attr('d'));
-		// });
+
 		const node = zoomLayer
 			.append('g')
-			.attr('stroke', '#fff')
-			.attr('stroke-width', 1.5)
+			.attr('stroke-width', 1)
 			.selectAll('g')
 			.data(nodes)
 			.join('g')
-			.call((sel) => drawNode(sel, $colorScale, $colorCT))
-			.on('click', (event: any, d: { id: string; name: string }) => {
+			.attr('stroke', (d: any) => ( ($aesSettings.groupNodes && d._mergedCount > 1) ? '#000' : '#fff') )
+			.call((sel) => drawNode(sel, $colorScale, $aesSettings.CT))
+			.on('click', (event: any, d: { id: string; name: string, _mergedCount: number }) => {
+				if (d._mergedCount > 1) return;
 				selectedNode.set(d.id);
 				selectedNodeName.set(d.name);
-				highlightNode(d.id, links, node, link);
+				highlightNode(d.id, simLinks, node, link);
 			});
 
 		svg.on('click', (event) => {
@@ -203,17 +206,19 @@
 			}
 		});
 
-		node.append('title').text((d: any) => `${d.name} (${d.celltype}) - ${d.moltype}`);
-		link
-			.append('title')
+		node.append('title').text((d: any) => {
+			if (d._mergedNames?.length > 1) {
+				return `Merged TFs (${d._mergedCount}):\n${d._mergedNames.join('\n')}\n(${d.celltype})`;
+			}
+			return `${d.name}\n(${d.celltype})\n${d.moltype}`;
+		});
+		link.append('title')
 			.text((d: any) =>
 				d.type === 'LR'
 					? `LR (${d.source.name} → ${d.target.name}) weight: ${d.weight.toFixed(3)} significance: ${d.significance.toFixed(3)}`
 					: `${d.type} (${d.source.name} → ${d.target.name})`
 			);
 
-		// The force simulation proposes positions; override by projecting each
-		// node back onto its exact ring radius while keeping the angular direction.
 		simulation.on('tick', () => {
 			nodes.forEach((d) => {
 				const ri = ringIndexOf(d);
@@ -227,16 +232,9 @@
 			});
 			node.attr('transform', (d: any) => `translate(${d.x},${d.y})`);
 			link.attr('d', linkPath);
-			link.call((sel) => aesEdge(sel, $aesLRMapping, $aesTFMapping));
+			link.call((sel) => aesEdge(sel, $aesSettings.LR, $aesSettings.TF));
 		});
 
-		// simulation.on('end', () => {
-		// 	link.call((sel) => aesEdge(sel, $aesLRMapping, $aesTFMapping));
-		// });
-
-		// Instantly reposition all nodes on ring `ri` using their stored base
-		// angles combined with the current ringRotations[ri] and ringRadii[ri].
-		// called directly by the drag handlers
 		function reprojectRing(ri: number) {
 			nodes.forEach((d) => {
 				if (ringIndexOf(d) === ri) projectNode(d);
@@ -252,13 +250,6 @@
 			.join('g')
 			.attr('class', 'ring-g');
 
-		// One resize handle per ring
-		// Rotation never moves this handle, it is always at (cx + radius, cy).
-		//   1. Drag start: stop simulation
-		//   2. Drag: pointer distance from centre → new ringRadii[i].
-		//            reprojectRing(i) repositions nodes (base angles unchanged).
-		//            Any ring can be dragged past any other ring freely.
-		//   3. Drag end: soft simulation restart so inter-ring links can relax.
 		function resizeX(i: number) {
 			return cx() + ringRadii[i];
 		}
@@ -325,13 +316,6 @@
 				})
 		);
 
-		// One rotate handle per ring
-		//   1. Drag start: record the pointer's angle from centre and the ring's current rotation.
-		//   2. Drag: delta  = atan2(pointer) – atan2(start pointer)
-		//            ringRotations[i] = savedRotation + delta
-		//            reprojectRing(i) repositions nodes using updated rotation
-		//   3. Drag end: soft restart so cross-ring links relax.
-
 		function rotX(i: number) {
 			return cx() + ringRadii[i] * Math.cos(-Math.PI / 2 + ringRotations[i]);
 		}
@@ -361,7 +345,6 @@
 			.attr('x', rotX)
 			.attr('y', rotY);
 
-		// Per-ring drag-start snapshots
 		const dragStartAngle = new Array<number>(n).fill(0);
 		const rotationAtDragStart = new Array<number>(n).fill(0);
 
@@ -392,33 +375,22 @@
 					simulation.alpha(0.05).restart();
 				})
 		);
-		console.log('COLORCT ', $colorCT);
-		drawLegend(
-			svgContainer,
-			$colorScale,
-			$aesLRMapping,
-			$aesTFMapping,
-			$sender,
-			$receiver,
-			$colorCT
-		);
 		nodeSelection = node;
 		linkSelection = link;
-		// apply highlight after re-render
+
 		applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
 	};
 
 	onMount(() => {
-		//this different onMount logic is a desperate attempt to solve the markers problem.
-		// Check if already visible
-		if (svgContainer?.closest('.tab-pane')?.classList.contains('show')) {
+		requestAnimationFrame(() => {
+			if (svgContainer?.closest('.tab-pane')?.classList.contains('show')) {
 			renderNetwork();
-		}
+			}
+		});
 
-		// Also render when tab becomes visible
 		const handler = (e: any) => {
 			if (e.target?.getAttribute('href') === '#network-circular') {
-				renderNetwork();
+			requestAnimationFrame(() => renderNetwork());
 			}
 		};
 		document.addEventListener('shown.bs.tab', handler);
@@ -428,9 +400,7 @@
 		simulation?.stop();
 	});
 	$: {
-		$aesLRMapping;
-		$aesTFMapping;
-		$colorCT;
+		$aesSettings
 		if (
 			networkData?.nodes?.length &&
 			svgContainer?.closest('.tab-pane')?.classList.contains('show')
@@ -440,5 +410,9 @@
 	}
 	$: applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
 </script>
-
-<svg bind:this={svgContainer}></svg>
+<div style="position: relative; width: 100%; height: 100%;">
+	<DrawNetLegend />
+	<div bind:this={containerDiv} style="width: 100%; height: 100%;">
+	<svg bind:this={svgContainer} style="width: 100%; height: 100%; display: block;"></svg>
+	</div>
+</div>
