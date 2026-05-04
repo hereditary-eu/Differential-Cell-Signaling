@@ -14,7 +14,7 @@
 	import GroupToggle from './GroupToggle.svelte';
 
 	let groupNodes = $state(true);
-	let isHorizontal = $state(false);
+	let isHorizontal = $state(true);
 	let maxSteps = $state(4);
 
 	const backend = import.meta.env.VITE_BACKEND_URL;
@@ -207,12 +207,12 @@
 				.attr('d', (d: any) => {
 					let end = { x: d.target.x, y: d.target.y };
 					if (d.type === 'TFL') {
-						end = trimPath(d.source, d.target, 10);
+						console.log('gonna trim em all')
+						end = trimPath(d.source, d.target, 60); // this is evaluated but does not work...
 					}
 					const dx = d.target.x - d.source.x;
 					const dy = d.target.y - d.source.y;
 					const dr = Math.sqrt(dx * dx + dy * dy); // radius for arc
-					// const dr = Math.sqrt(dx * dx + dy * dy) * 1.5; // increase curvature by multiplying
 					return `
 					M ${d.source.x},${d.source.y}
 					A ${dr},${dr} 0 0 1 ${end.x},${end.y}

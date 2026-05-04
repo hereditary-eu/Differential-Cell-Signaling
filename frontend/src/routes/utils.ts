@@ -327,15 +327,16 @@ export function defineMarkers(
     }
 
 export function resetNodesSize (nodeSelection: any, nodeSize = NODE_SIZES) {
-        nodeSelection.select('circle').attr('r', nodeSize.TF.base);
-        nodeSelection.selectAll('rect')
-                .attr('width', nodeSize.receptor.base)
-                .attr('width', nodeSize.receptor.base)
-                .attr('x', -nodeSize.receptor.base/2)
-                .attr('y', -nodeSize.receptor.base/2);
-        nodeSelection.selectAll('path')
-            .attr('d', d3.symbol().type(d3.symbolTriangle).size(nodeSize.ligand.base));
-        return;
+    console.log('called resetNodesSize')    
+    nodeSelection.select('circle').attr('r', nodeSize.TF.base);
+    nodeSelection.selectAll('rect')
+            .attr('width', nodeSize.receptor.base)
+            .attr('height', nodeSize.receptor.base)
+            .attr('x', -nodeSize.receptor.base/2)
+            .attr('y', -nodeSize.receptor.base/2);
+    nodeSelection.selectAll('path')
+        .attr('d', d3.symbol().type(d3.symbolTriangle).size(nodeSize.ligand.base));
+    return;
 }
 //this is the highlight called when node is searched by SidebarSearch
 export function applyHighlightSearch(

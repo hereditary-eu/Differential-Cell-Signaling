@@ -19,7 +19,10 @@
 		aesEdge,
 		defineMarkers,
 		trimPath,
-		applyHighlightSearch
+		applyHighlightSearch,
+
+		resetNodesSize
+
 	} from './utils';
 	import DrawNetLegend from './drawNetLegend.svelte';
 	export let networkData: { nodes: any[]; links: any[] };
@@ -203,6 +206,7 @@
 			if (event.target === svg.node()) {
 				node.attr('opacity', 1);
 				link.attr('opacity', 1);
+				resetNodesSize(nodeSelection);
 			}
 		});
 
@@ -210,12 +214,12 @@
 			if (d._mergedNames?.length > 1) {
 				return `Merged TFs (${d._mergedCount}):\n${d._mergedNames.join('\n')}\n(${d.celltype})`;
 			}
-			return `${d.name}\n(${d.celltype})\n${d.moltype}`;
+			return `${d.name}\n(${d.celltype})\n${d.moltype}\nB.: ${d.betweenness.toFixed(4)}\nP.: ${d.pagerank.toFixed(4)}`;
 		});
 		link.append('title')
 			.text((d: any) =>
 				d.type === 'LR'
-					? `LR (${d.source.name} → ${d.target.name}) weight: ${d.weight.toFixed(3)} significance: ${d.significance.toFixed(3)}`
+					? `LR (${d.source.name} → ${d.target.name}) weight: ${d.weight.toFixed(4)} significance: ${d.significance.toFixed(4)}`
 					: `${d.type} (${d.source.name} → ${d.target.name})`
 			);
 
