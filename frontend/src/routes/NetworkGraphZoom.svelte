@@ -10,14 +10,16 @@
 		defineMarkers,
 		applyHighlightSearch,
 		resetNodesSize,
-		deduplicateTFs
+		deduplicateTFs,
+		applyCycleHighlight
 	} from './utils';
 	import {
 		colorScale,
 		selectedNode,
 		selectedNodeName,
 		highlightedNode,
-		aesSettings
+		aesSettings,
+		highlightedCycle
 	} from '$lib/stores';
 	import DrawNetLegend from './drawNetLegend.svelte';
 
@@ -161,7 +163,7 @@
 	}
 
 	$: applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
-
+	$: applyCycleHighlight($highlightedCycle, nodeSelection, linkSelection);
 	onMount(() => {
 		requestAnimationFrame(() => renderNetwork());   // containerDiv has real size
 	});

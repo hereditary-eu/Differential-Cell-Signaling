@@ -7,9 +7,9 @@ from typing import Literal
 import statistics
 import networkx as nx
 from collections import Counter, defaultdict, deque
+from itertools import islice
 
 app = FastAPI()
-
 origins = ['http://localhost:5173', 'http://127.0.0.1:5173'] #allow frontend to connect
 #ATTENTION: if backend is run as 127.0.0.1, CORS error arises! so use 0.0.0.0
 app.add_middleware(
@@ -31,77 +31,140 @@ def get_db_connection():
     )
 
 # benedikt if u see this, it's just temporary!!!! :) i'll switch to puppygraph. es tut mir leid
-def normalize_cycle(cycle):
+def normalize_cycle(cycle: list) -> tuple:
     """Normalize a cycle to remove rotational duplicates."""
     min_index = cycle.index(min(cycle))
     return tuple(cycle[min_index:] + cycle[:min_index])
 
-@app.get("/api/cycles")
-def find_cycles(comparison: str):
-    print('starting cycles computation...')
-    conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-    # Get edges with node info (celltype)
-    cur.execute("""
-        SELECT l.source, l.target, l.type, 
-               ns.celltype AS source_celltype, 
-               nt.celltype AS target_celltype
-        FROM links l
-        JOIN nodes ns ON ns.id = l.source
-        JOIN nodes nt ON nt.id = l.target
-        WHERE l.comparison = %s
-    """, (comparison,))
-    edges = cur.fetchall()
-    cur.close()
-    conn.close()
-    print(f"Fetched {len(edges)} edges for cycle detection.")
-    if not edges:
-        return {"cycles": []}
-    
-    #need to have all three layers involved to find a cycle
-    found_e_types: set = set(e['type'] for e in edges)
-    if len(found_e_types) < 3:
-        return {"cycles": []}
-
+def build_graph(nodes: list, links: list) -> nx.DiGraph:
+    """
+    Build a directed graph where:
+    - LR links are bidirectional (added in both directions)
+    - TFL and RTF links are directed
+    """
     G = nx.DiGraph()
-    node_celltype = {}
-    for e in edges:
-        G.add_edge(e['source'], e['target'], type=e['type'])
-        node_celltype[e['source']] = e['source_celltype']
-        node_celltype[e['target']] = e['target_celltype']
-        # Make LR edges undirected
-        if e['type'] == 'LR':
-            G.add_edge(e['target'], e['source'], type='LR')
+    node_ids = {n['id'] for n in nodes}
+    G.add_nodes_from(node_ids)
 
-    # Find cycles using networkx
-    raw_cycles = list(nx.simple_cycles(G))
+    for l in links:
+        src, tgt, ltype = l['source'], l['target'], l['type']
+        if src not in node_ids or tgt not in node_ids:
+            continue
+        G.add_edge(src, tgt, type=ltype, weight=l.get('weight'), id=l.get('id'))
+        if ltype == 'LR':
+            G.add_edge(tgt, src, type=ltype, weight=l.get('weight'), id=l.get('id'), reversed=True)
+    return G
 
-    # Remove rotational duplicates 
-    unique_cycles_set = set()
-    filtered_cycles = []
-    for cycle in raw_cycles:
-        normalized = normalize_cycle(cycle)
-        if normalized not in unique_cycles_set:
-            unique_cycles_set.add(normalized)
-            # Add celltype info for display and frontend
-            cycle_nodes = [
-                {"id": node, "celltype": node_celltype[node]} 
-                for node in cycle
-            ]
-            display_string = " - ".join(
-                [f"{n['id']} ({n['celltype']})" for n in cycle_nodes] + 
-                [f"{cycle_nodes[0]['id']} ({cycle_nodes[0]['celltype']})"]
-            )
-            filtered_cycles.append({
-                "id": len(filtered_cycles) + 1,
-                "length": len(cycle),
-                "nodes": cycle_nodes,
-                "display": display_string
+def find_cycles(nodes: list, links: list, max_cycle_length: int = 10, max_cycles: int = 500) -> dict:
+    """
+    max_cycle_length: cap on cycle length to avoid explosion (default 10)
+        max_cycles: maximum number of cycles to return (default 500)
+    Returns dict with cycles list and stats
+    """
+    if not nodes or not links:
+        return {'cycles': [], 'nCycles': 0, 'truncated': False}
+    G = build_graph(nodes, links)
+
+    #Johnson's algorithm for sparse graphs
+    seen = set()
+    cycles = []
+    truncated = False
+    raw_gen = nx.simple_cycles(G)
+
+    for cycle in islice(raw_gen, max_cycle_length*10):
+        if len(cycle) <= 2 or len(cycle) > max_cycle_length:
+            continue
+        key = normalize_cycle(cycle)
+        if key in seen:
+            continue
+        seen.add(key)
+        
+        edges = []
+        for i in range(len(cycle)):
+            src = cycle[i]
+            tgt = cycle[(i + 1) % len(cycle)]
+            edge_data = G.get_edge_data(src, tgt) or {}
+            edges.append({
+                'source': src,
+                'target': tgt,
+                'type': edge_data.get('type'),
+                'weight': edge_data.get('weight'),
+                'id': edge_data.get('id'),
+                'reversed': edge_data.get('reversed', False)
             })
-    print(filtered_cycles)
-    print('finished cycles computation!')
-    return {"cycles": filtered_cycles}
+        cycles.append({'nodes': list(key), 'edges': edges, 'length': len(key)})
+
+        if len(cycles) >= max_cycles:
+            truncated = True
+            break
+    cycles.sort(key=lambda c: c['length'])
+    return {'cycles': cycles, 'nCycles': len(cycles), 'truncated': truncated}
+
+@app.get("/api/cycles")
+def get_cycles(
+    comparison: str = None,
+    sender: str = None,
+    receiver: str = None,
+    reverse_sig: bool = False,
+    filter_intrascore: bool = False,
+    filter_pv: bool = False,
+    filter_inter: bool = False,
+    min_intrascore: float = 0.5,
+    max_intrascore: float = 1.0,
+    pv_thresh: float = 0.05,
+    focus_on_LR: bool = False,
+    inter_dir: Literal['up', 'down'] = 'up',
+    max_cycle_length: int = 10,
+    max_cycles: int = 500
+):
+    """
+    Returns all simple cycles in the filtered network.
+    LR links are treated as undirected; TFL and RTF as directed.
+    """
+    nodes, links = filter_network(
+        comparison, sender, receiver, reverse_sig, filter_intrascore,
+        filter_pv, filter_inter, min_intrascore, max_intrascore,
+        pv_thresh, focus_on_LR, inter_dir
+    )
+    node_meta = {
+        n['id']: {
+            'name': n.get('name'),
+            'celltype': n.get('celltype'),
+            'moltype': n.get('moltype'),
+            'betweenness': n.get('betweenness'),
+            'pagerank': n.get('pagerank')
+        }
+        for n in nodes
+    }
+    edge_meta = {}
+    for l in links:
+        key = (l['source'], l['target'])
+        edge_meta[key] = {
+            'type':   l.get('type'),
+            'weight': l.get('weight'),
+        }
+        if l.get('type') == 'LR':
+            edge_meta[(l['target'], l['source'])] = {
+                'type':     l.get('type'),
+                'weight':   l.get('weight'),
+                'reversed': True,
+            }
+    result = find_cycles(nodes, links, max_cycle_length=max_cycle_length, max_cycles=max_cycles)
+    for cycle in result['cycles']:
+        cycle['nodes'] = [
+            {'id': nid, **node_meta.get(nid, {})}
+            for nid in cycle['nodes']
+        ]
+        cycle['edges'] = [
+            {
+                'source':   e['source'],
+                'target':   e['target'],
+                'reversed': e.get('reversed', False),
+                **edge_meta.get((e['source'], e['target']), {'type': e.get('type'), 'weight': None}),
+            }
+            for e in cycle['edges']
+        ]
+    return result
 
 def precompute(comparison: str):
     conn = get_db_connection()
@@ -245,15 +308,14 @@ def get_full_network(comparison: str):
     b_topMols = [n['name'] for n in sorted(nodes, key=lambda n: (n['betweenness']or 0 ), reverse=True)]
     b_topMols = list(dict.fromkeys(b_topMols))[:5] #keep order but remove duplicates 
     p_topMols = list(dict.fromkeys([n['name'] for n in sorted(nodes, key=lambda n: (n['pagerank'] or 0), reverse=True)]))[:5]
-    print(lr_counts)
+    
     top_sr = max(lr_counts, key=lr_counts.get, default=None)
-    print(f"Top sender-receiver pair: {top_sr}")
     if top_sr:
         top_sender = top_sr[0]
         top_receiver = top_sr[1]
     else: 
         top_sender = top_receiver = None
-    print(f"Top sender: {top_sender}, Top receiver: {top_receiver}")
+    
     return {'nodes': nodes, 
             'links': links, 
             'stats': {
@@ -418,8 +480,6 @@ def get_filtered_network(
         comparison, sender, receiver, reverse_sig, filter_intrascore, filter_pv, filter_inter,
         min_intrascore, max_intrascore, pv_thresh, focus_on_LR, inter_dir
     )
-    # print(nodes[:5])  # Debug: print first 5 nodes
-    # print(sorted(nodes, key=lambda n: (n['pagerank'] or 0), reverse=True)[:3])
     stats = {
         'nNodes': len(nodes),
         'nLigands': 0,
@@ -542,9 +602,6 @@ def get_node_neighborhood(
 
     cur.close()
     conn.close()
-
-    print(f"Neighborhood for node {root_id_int} (comparison: {comparison}): "
-          f"{len(nodes_out)} nodes, {len(subgraph_links)} links")
 
     return {
         'nodes': nodes_out,

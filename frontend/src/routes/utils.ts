@@ -447,3 +447,50 @@ export	function deduplicateTFs(rawNodes: any[], rawLinks: any[]): { nodes: any[]
 			links: dedupedLinks
 		};
 	}
+
+export function applyCycleHighlight(
+    cycleData: { nodeIds: Set<string>; edgePairs: Set<string> } | null,
+    nodeSelection: any,
+    linkSelection: any,
+    nodeSize = NODE_SIZES
+) {
+    if (!nodeSelection) return;
+
+    if (!cycleData) {
+        nodeSelection.attr('opacity', 1);
+        linkSelection?.attr('opacity', 1);
+        resetNodesSize(nodeSelection, nodeSize);
+        return;
+    }
+
+    const { nodeIds, edgePairs } = cycleData;
+
+    nodeSelection.attr('opacity', (d: any) => (nodeIds.has(d.id) ? 1 : 0.12));
+    linkSelection?.attr('opacity', (l: any) => {
+        const srcId = typeof l.source === 'object' ? l.source.id : l.source;
+        const tgtId = typeof l.target === 'object' ? l.target.id : l.target;
+        const fwd = edgePairs.has(`${srcId}->${tgtId}`);
+        const rev = edgePairs.has(`${tgtId}->${srcId}`); // LR reversed
+        return fwd || rev ? 1 : 0.06;
+    });
+
+    nodeSelection.each(function (this: SVGGElement, d: any) {
+        const g = d3.select(this);
+        const inCycle = nodeIds.has(d.id);
+        if (d.moltype === 'TF') {
+        g.select('circle').attr('r', inCycle ? nodeSize.TF.highlight : nodeSize.TF.base);
+        } else if (d.moltype === 'ligand') {
+        g.select('path').attr(
+            'd',
+            d3.symbol().type(d3.symbolTriangle).size(inCycle ? nodeSize.ligand.highlight : nodeSize.ligand.base)
+        );
+        } else if (d.moltype === 'receptor') {
+        const side = inCycle ? nodeSize.receptor.highlight : nodeSize.receptor.base;
+        g.select('rect')
+            .attr('width', side)
+            .attr('height', side)
+            .attr('x', -side / 2)
+            .attr('y', -side / 2);
+        }
+    });
+}

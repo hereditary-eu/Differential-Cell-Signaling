@@ -34,3 +34,7 @@ export const aesSettings = writable({
     groupNodes: <boolean>(false)
 })
 export const highlightedNode = writable<string | null>(null);
+export const highlightedCycle = writable<{
+  nodeIds: Set<string>;
+  edgePairs: Set<string>; // "sourceId->targetId" for fast lookup
+} | null>(null);
