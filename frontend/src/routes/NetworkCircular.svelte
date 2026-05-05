@@ -8,6 +8,7 @@
 		colorScale,
 		aesSettings,
 		highlightedNode,
+		highlightedCycle,
 		selectedNode,
 		selectedNodeName
 	} from '$lib/stores';
@@ -20,7 +21,7 @@
 		defineMarkers,
 		trimPath,
 		applyHighlightSearch,
-
+		applyCycleHighlight,
 		resetNodesSize
 
 	} from './utils';
@@ -413,6 +414,7 @@
 		}
 	}
 	$: applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
+	$: applyCycleHighlight($highlightedCycle, nodeSelection, linkSelection);
 </script>
 <div style="position: relative; width: 100%; height: 100%;">
 	<DrawNetLegend />

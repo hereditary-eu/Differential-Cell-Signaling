@@ -22,13 +22,11 @@
 	// update selectedNode and pass neighboorhoodData to detailed view
 	$effect(() => {
 		if ($selectedNode) {
-			console.log('CALLING fetchNeighborhood')
 			fetchNeighborhood($selectedNode);
 		}
 	});
 	async function fetchNeighborhood(nodeId: string) {
 		if (!$sender || !$receiver) return;
-		console.log('selectedNode value', nodeId);
 		try {
 			const res = await fetch(
 				`${backend}/api/neighborhood?root_id=${nodeId}&max_steps=${maxSteps}&${$filteringQueryStr}`
@@ -60,6 +58,11 @@
 
 	function renderTree() {
 		if (!$neighborhoodData?.nodes?.length || !$neighborhoodData?.rootId) return;
+		if ($neighborhoodData?.nodes?.length <= 1) {
+			d3.select(svgContainer).selectAll('*').remove();
+			d3.select(svgContainer).text('Searched node not found in current sender-receiver sub-graph.').attr('fill', '#000');
+			return;
+		};
 
 		const W = containerDiv?.clientWidth || 600;
 		const H = containerDiv?.clientHeight || 500;

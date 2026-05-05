@@ -164,6 +164,7 @@
 
 	$: applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
 	$: applyCycleHighlight($highlightedCycle, nodeSelection, linkSelection);
+	
 	onMount(() => {
 		requestAnimationFrame(() => renderNetwork());   // containerDiv has real size
 	});

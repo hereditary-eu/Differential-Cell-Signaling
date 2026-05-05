@@ -356,13 +356,11 @@ export function applyHighlightSearch(
 
 		let matchIds: Set<string>;
 		if (value.startsWith('name:')) {
-			// Match all nodes sharing this molecule name
 			const name = value.slice(5);
 			matchIds = new Set(
 				(networkData?.nodes ?? []).filter((n: any) => n.name === name).map((n: any) => n.id)
 			);
 		} else {
-			// Match exact verbose_id (name__celltype) to single node
 			matchIds = new Set(
 				(networkData?.nodes ?? []).filter((n: any) => n.verbose_id === value).map((n: any) => n.id)
 			);
@@ -370,7 +368,6 @@ export function applyHighlightSearch(
 		nodeSelection.attr('opacity', (d: any) => (matchIds.has(d.id) ? 1 : 0.15));
 		linkSelection?.attr('opacity', 0.15);
 
-        // increase size
 		nodeSelection.each(function (this: SVGGElement, d: any) {
             const g = d3.select(this);
             const isMatch = matchIds.has(d.id);
@@ -388,7 +385,7 @@ export function applyHighlightSearch(
  	// TF nodes are merged if identical sets of:
 	//   - outgoing links (same target id + weight)
 	//   - incoming links (same source id + weight)
-export	function deduplicateTFs(rawNodes: any[], rawLinks: any[]): { nodes: any[]; links: any[] } {
+export function deduplicateTFs(rawNodes: any[], rawLinks: any[]): { nodes: any[]; links: any[] } {
 		const tfNodes = rawNodes.filter((n) => n.moltype === 'TF');
 		const nonTFNodes = rawNodes.filter((n) => n.moltype !== 'TF');
 
@@ -452,31 +449,41 @@ export function applyCycleHighlight(
     cycleData: { nodeIds: Set<string>; edgePairs: Set<string> } | null,
     nodeSelection: any,
     linkSelection: any,
-    nodeSize = NODE_SIZES
-) {
+    //   colorScale: d3.ScaleOrdinal<string, string, string>,
+    nodeSize = NODE_SIZES,
+    fontSize = 9
+    ) {
     if (!nodeSelection) return;
 
     if (!cycleData) {
         nodeSelection.attr('opacity', 1);
         linkSelection?.attr('opacity', 1);
         resetNodesSize(nodeSelection, nodeSize);
+        nodeSelection.selectAll('.cycle-label').remove(); 
+        nodeSelection.selectAll('.cycle-ring').remove();
         return;
     }
 
     const { nodeIds, edgePairs } = cycleData;
 
-    nodeSelection.attr('opacity', (d: any) => (nodeIds.has(d.id) ? 1 : 0.12));
-    linkSelection?.attr('opacity', (l: any) => {
-        const srcId = typeof l.source === 'object' ? l.source.id : l.source;
-        const tgtId = typeof l.target === 'object' ? l.target.id : l.target;
-        const fwd = edgePairs.has(`${srcId}->${tgtId}`);
-        const rev = edgePairs.has(`${tgtId}->${srcId}`); // LR reversed
-        return fwd || rev ? 1 : 0.06;
-    });
+    const normalizedIds = new Set([...nodeIds].map(String));
 
+    nodeSelection.attr('opacity', (d: any) => (normalizedIds.has(String(d.id)) ? 1 : 0.12));
+
+    linkSelection?.attr('opacity', (l: any) => {
+        const srcId = String(typeof l.source === 'object' ? l.source.id : l.source);
+        const tgtId = String(typeof l.target === 'object' ? l.target.id : l.target);
+        return edgePairs.has(`${srcId}->${tgtId}`) || edgePairs.has(`${tgtId}->${srcId}`) ? 1 : 0.06;
+    });
+    aesEdge(linkSelection, 'volcano', 'endShape');
+
+    nodeSelection.selectAll('.cycle-label').remove();
+    nodeSelection.selectAll('.cycle-ring').remove();
+    
     nodeSelection.each(function (this: SVGGElement, d: any) {
         const g = d3.select(this);
-        const inCycle = nodeIds.has(d.id);
+        const inCycle = normalizedIds.has(String(d.id));
+
         if (d.moltype === 'TF') {
         g.select('circle').attr('r', inCycle ? nodeSize.TF.highlight : nodeSize.TF.base);
         } else if (d.moltype === 'ligand') {
@@ -487,10 +494,53 @@ export function applyCycleHighlight(
         } else if (d.moltype === 'receptor') {
         const side = inCycle ? nodeSize.receptor.highlight : nodeSize.receptor.base;
         g.select('rect')
-            .attr('width', side)
-            .attr('height', side)
-            .attr('x', -side / 2)
-            .attr('y', -side / 2);
+            .attr('width', side).attr('height', side)
+            .attr('x', -side / 2).attr('y', -side / 2);
         }
+
+        if (!inCycle) return;
+
+        // const cellColor = colorScale(d.celltype);
+        if (d.moltype === 'TF') {
+        g.insert('circle', ':first-child')  // behind the fill circle
+            .attr('class', 'cycle-ring')
+            .attr('r', nodeSize.TF.highlight + 2.5)
+            .attr('fill', 'none')
+            // .attr('stroke', cellColor)
+            .attr('stroke-width', 2);
+        } else if (d.moltype === 'ligand') {
+        g.insert('path', ':first-child')
+            .attr('class', 'cycle-ring')
+            .attr('d', d3.symbol().type(d3.symbolTriangle).size(nodeSize.ligand.highlight + 40))
+            .attr('fill', 'none')
+            // .attr('stroke', cellColor)
+            .attr('stroke-width', 2);
+        } else if (d.moltype === 'receptor') {
+        const side = nodeSize.receptor.highlight + 5;
+        g.insert('rect', ':first-child')
+            .attr('class', 'cycle-ring')
+            .attr('width', side).attr('height', side)
+            .attr('x', -side / 2).attr('y', -side / 2)
+            .attr('fill', 'none')
+            // .attr('stroke', cellColor)
+            .attr('stroke-width', 2);
+        }
+
+        const labelOffset = d.moltype === 'TF'
+        ? nodeSize.TF.highlight + 5
+        : d.moltype === 'receptor'
+            ? nodeSize.receptor.highlight / 2 + 7
+            : 13; // ligand triangle: roughly half height
+
+        g.append('text')
+        .attr('class', 'cycle-label')
+        .attr('text-anchor', 'middle')
+        .attr('dy', labelOffset)
+        .attr('font-size', fontSize)
+        .attr('font-weight', '600')
+        .attr('stroke', 'var(--color-surface, #fff)')
+        .attr('stroke-width', '1px')
+        .attr('paint-order', 'stroke')   // stroke renders behind fill 
+        .text(d.name);
     });
 }

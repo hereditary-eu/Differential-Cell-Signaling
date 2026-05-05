@@ -41,12 +41,12 @@
 			})
 		);
 		highlightedCycle.set({ nodeIds, edgePairs });
-		console.log('update highlighted Cycles: ', nodeIds)
   }
   function clearHighlight() {
 	activeIdx = null;
     highlightedCycle.set(null);
   }
+  $: {$filteringQueryStr; clearHighlight(); result = null; }
 </script>
 
 <div class="controls">
@@ -91,7 +91,7 @@
 		<p class="msg muted">No cycles detected in the current network.</p>
 
 	{:else}
-		<p class="hint">Click a cycle to highlight it in the network.</p>
+		<!-- <p class="hint">Click a cycle to highlight it in the network.</p> -->
 		<ul class="cycle-list">
 			{#each result.cycles as cycle, idx}
 				{@const active = activeIdx === idx}
@@ -107,7 +107,6 @@
 					<div class="card-header">
 						<span class="cycle-label">Cycle {idx + 1}</span>
 						<span class="cycle-meta">{cycle.length} nodes</span>
-						<span class="hl-indicator" class:visible={active}>◉</span>
 					</div>
 					<div class="flow">
 						{#each cycle.nodes as node, ni}
