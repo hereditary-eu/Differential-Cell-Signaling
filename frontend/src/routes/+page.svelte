@@ -196,6 +196,26 @@
 			</div>
 		</aside>
 		<main class="flex-grow-1 p-4" id="graph-area">
+			<svg width="0" height="0" style="position:absolute; pointer-events:none;">
+				<defs>
+					<marker id="arrow" viewBox="0 -5 10 10" refX="9" refY="0"
+						markerWidth="6" markerHeight="6" orient="auto">
+						<path d="M0,-5L10,0L0,5" fill="#999"/>
+					</marker>
+					<marker id="Tblunt" viewBox="-2 -6 4 12" refX="1" refY="0"
+						markerWidth="10" markerHeight="10" orient="auto">
+						<path d="M0,-6L0,6" stroke="#999" stroke-width="2"/>
+					</marker>
+					<marker id="leg-arrow" viewBox="0 -3 6 6" refX="5" refY="0"
+						markerWidth="4" markerHeight="4" orient="auto">
+						<path d="M0,-3L6,0L0,3" fill="#999"/>
+					</marker>
+					<marker id="leg-blunt" viewBox="-2 -4 4 8" refX="1" refY="0"
+						markerWidth="6" markerHeight="6" orient="auto">
+						<line x1="0" y1="-4" x2="0" y2="4" stroke="#999" stroke-width="1.5"/>
+					</marker>
+				</defs>
+			</svg>
 			<div style="display: flex; align-items: flex-start; gap: 1%; width: 100%;">
 				<!-- full net -->
 				<div
@@ -292,7 +312,7 @@
 			<!-- info boxes -->
 			<div
 				class="card border-info mb-3"
-				style="max-width: 30%; display: inline-block; margin-right: 1rem; "
+				style="max-width: 30%; display: inline-block; margin-right: 1rem; margin-top: 1rem;"
 			>
 				<div class="card-header">Full Network Stats</div>
 				<div class="card-body">
@@ -332,7 +352,7 @@
 				<div
 					class="alert alert-info"
 					role="alert"
-					style="max-width: 40%; display: inline-block; vertical-align: top;"
+					style="max-width: 40%; display: inline-block; vertical-align: top; margin-right: 1rem; margin-top: 1rem;"
 				>
 					Apply filters to see network statistics and visualization.
 				</div>

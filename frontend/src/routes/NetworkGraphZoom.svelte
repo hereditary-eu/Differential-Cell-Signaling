@@ -67,7 +67,7 @@
 			.style('background', 'transparent')
 			.style('cursor', 'grab');
 
-		defineMarkers(svg);
+		// defineMarkers(svg);
 
 		const zoomLayer = svg.append('g');
 		const { zoom } = zoomBehavior(zoomLayer);      

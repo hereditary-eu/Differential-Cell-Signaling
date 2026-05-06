@@ -190,13 +190,13 @@
 					if (l.source.id === d.id) neighborIds.add(l.target.id);
 					if (l.target.id === d.id) neighborIds.add(l.source.id);
 				});
-				linkSel.attr('stroke-opacity', (l: any) =>
+				linkSel.attr('opacity', (l: any) =>
 					l.source.id === d.id || l.target.id === d.id ? 1 : 0.06
 				);
 				nodeSel.attr('opacity', (n: any) => (n.id === d.id || neighborIds.has(n.id) ? 1 : 0.15));
 			})
 			.on('mouseout', () => {
-				linkSel.attr('stroke-opacity', 0.9);
+				linkSel.attr('opacity', 0.9);
 				nodeSel.attr('opacity', 1);
 			});
 
@@ -204,21 +204,13 @@
 			linkSel
 				.attr('x1', (d: any) => d.source.x)
 				.attr('y1', (d: any) => d.source.y)
-				.attr('x2', (d: any) => d.target.x)
-				.attr('y2', (d: any) => d.target.y)
-				.attr('d', (d: any) => {
-					let end = { x: d.target.x, y: d.target.y };
-					if (d.type === 'TFL') {
-						console.log('gonna trim em all')
-						end = trimPath(d.source, d.target, 90); // this is evaluated but does not work...
-					}
-					const dx = d.target.x - d.source.x;
-					const dy = d.target.y - d.source.y;
-					const dr = Math.sqrt(dx * dx + dy * dy); // radius for arc
-					return `
-					M ${d.source.x},${d.source.y}
-					A ${dr},${dr} 0 0 1 ${end.x},${end.y}
-				`;
+				.attr('x2', (d: any) => {
+            		if (d.type === 'TFL') return trimPath(d.source, d.target, 9).x;
+            		return d.target.x;
+				})
+				.attr('y2', (d: any) => {
+					if (d.type === 'TFL') return trimPath(d.source, d.target, 9).y;
+					return d.target.y;
 				});
 			nodeSel.attr('transform', (d: any) => `translate(${d.x ?? 0},${d.y ?? 0})`);
 		});

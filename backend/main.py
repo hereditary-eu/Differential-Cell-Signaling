@@ -30,11 +30,12 @@ def get_db_connection():
         port='5436'
     )
 
-# benedikt if u see this, it's just temporary!!!! :) i'll switch to puppygraph. es tut mir leid
 def normalize_cycle(cycle: list) -> tuple:
     """Normalize a cycle to remove rotational duplicates."""
     min_index = cycle.index(min(cycle))
-    return tuple(cycle[min_index:] + cycle[:min_index])
+    rotated = cycle[min_index:] + cycle[:min_index]
+    reversed_rotated = [rotated[0]] + rotated[1:][::-1]
+    return tuple(min(rotated, reversed_rotated))
 
 def build_graph(nodes: list, links: list) -> nx.DiGraph:
     """

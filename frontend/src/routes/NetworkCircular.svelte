@@ -18,7 +18,7 @@
 		highlightNode,
 		deduplicateTFs,
 		aesEdge,
-		defineMarkers,
+		// defineMarkers,
 		trimPath,
 		applyHighlightSearch,
 		applyCycleHighlight,
@@ -145,7 +145,7 @@
 			.style('background', 'transparent')
 			.style('cursor', 'grab');
 
-		defineMarkers(svg); //still not working
+		// defineMarkers(svg); //still not working
 		
 		const zoomLayer = svg.append('g').attr('class', 'zoom-layer');
 		const { zoom } = zoomBehavior(zoomLayer);
@@ -186,7 +186,9 @@
 			.attr('stroke-width', 1)
 			.selectAll('path')
 			.data(simLinks)
-			.join('path');
+			.join('path')
+			.call((selection) => aesEdge(selection, $aesSettings.LR,$aesSettings.TF));
+
 
 		const node = zoomLayer
 			.append('g')
@@ -237,7 +239,6 @@
 			});
 			node.attr('transform', (d: any) => `translate(${d.x},${d.y})`);
 			link.attr('d', linkPath);
-			link.call((sel) => aesEdge(sel, $aesSettings.LR, $aesSettings.TF));
 		});
 
 		function reprojectRing(ri: number) {

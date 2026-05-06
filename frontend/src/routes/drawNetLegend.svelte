@@ -2,9 +2,6 @@
 	import { colorScale, sender, receiver, aesSettings } from "$lib/stores";
 </script>
 
-<!-- this is to placed inside a div with style as follows, which contains also Network vis -->
-<!-- <div style="position: relative; width: 100%; height: 100%;"> -->
-
 <div style="
     position: absolute;
     top: 8px;
@@ -62,24 +59,12 @@
         <div style="font-weight: 600; margin-top: 6px; margin-bottom: 2px;">TF regulation</div>
         <div style="display:flex; align-items:center; gap:5px;">
             <svg width="16" height="8">
-                <defs>
-                    <marker id="leg-arrow" viewBox="0 -3 6 6" refX="5" refY="0"
-                        markerWidth="4" markerHeight="4" orient="auto">
-                        <path d="M0,-3L6,0L0,3" fill="#999"/>
-                    </marker>
-                </defs>
                 <line x1="0" y1="4" x2="12" y2="4" stroke="#999" stroke-width="1.5" marker-end="url(#leg-arrow)"/>
             </svg>
             <span>Promoting</span>
         </div>
         <div style="display:flex; align-items:center; gap:5px;">
             <svg width="16" height="8">
-                <defs>
-                    <marker id="leg-blunt" viewBox="-2 -4 4 8" refX="1" refY="0"
-                        markerWidth="6" markerHeight="6" orient="auto">
-                        <line x1="0" y1="-4" x2="0" y2="4" stroke="#999" stroke-width="1.5"/>
-                    </marker>
-                </defs>
                 <line x1="0" y1="4" x2="12" y2="4" stroke="#999" stroke-width="1.5" marker-end="url(#leg-blunt)"/>
             </svg>
             <span>Inhibiting</span>

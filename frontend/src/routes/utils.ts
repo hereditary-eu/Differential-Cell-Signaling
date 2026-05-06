@@ -87,7 +87,7 @@ export function aesEdge(
                         g.attr('stroke', '#b2182b'); //'#8B0000'); // darkred for over-activation
                     }
                 }
-                g.attr('stroke-opacity', 1);
+                g.attr('opacity', 0.9);
                 
             } else if (d.type === 'TFL') {
                 if (aesTFMapping === 'endShape') {
@@ -126,18 +126,33 @@ export function highlightNode(selectedId: string, links: any, node: d3.Selection
         );
     }
 
-export function trimPath(source: { x: number; y: number }, target: { x: number; y: number }, r = 12) {
-			const dx = target.x - source.x;
-			const dy = target.y - source.y;
-			const dist = Math.sqrt(dx * dx + dy * dy);
+// export function trimPath(source: { x: number; y: number }, target: { x: number; y: number }, r = 12) {
+// 			const dx = target.x - source.x;
+// 			const dy = target.y - source.y;
+// 			const dist = Math.sqrt(dx * dx + dy * dy);
 
-			const ratio = (dist - r) / dist;
+// 			const ratio = (dist - r) / dist;
 
-			return {
-				x: source.x + dx * ratio,
-				y: source.y + dy * ratio
-			};
-		}
+// 			return {
+// 				x: source.x + dx * ratio,
+// 				y: source.y + dy * ratio
+// 			};
+// 		}
+export function trimPath(
+    source: { x: number; y: number },
+    target: { x: number; y: number },
+    r = 9
+) {
+    const dx = target.x - source.x;
+    const dy = target.y - source.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist <= r) return { x: target.x, y: target.y };
+    const ratio = (dist - r) / dist;
+    return {
+        x: source.x + dx * ratio,
+        y: source.y + dy * ratio
+    };
+}
 
 export function defineMarkers(
     svg: d3.Selection<SVGSVGElement, unknown, null, undefined>) {
@@ -317,7 +332,7 @@ export function applyCycleHighlight(
         const tgtId = String(typeof l.target === 'object' ? l.target.id : l.target);
         return edgePairs.has(`${srcId}->${tgtId}`) || edgePairs.has(`${tgtId}->${srcId}`) ? 1 : 0.06;
     });
-    aesEdge(linkSelection, 'volcano', 'endShape');
+    // aesEdge(linkSelection, 'volcano', 'endShape');
 
     nodeSelection.selectAll('.cycle-label').remove();
     nodeSelection.selectAll('.cycle-ring').remove();
