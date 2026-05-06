@@ -200,7 +200,7 @@
 				<!-- full net -->
 				<div
 					class="card border-primary mb-3"
-					style="width: 60%; height: 550px; display: flex; flex-direction: column;"
+					style="width: 60%; height: 60dvh; display: flex; flex-direction: column;"
 				>
 					<p class="card-header">Full Network for {$selectedCaseStudy} : {$selectedComparison}</p>
 					<div style="flex: 1; min-height: 0; overflow-y: auto;">
@@ -210,19 +210,19 @@
 
 				<div
 					class="card border-primary mb-3"
-					style="width: 39%; height: 550px; display: flex; flex-direction: column;"
+					style="width: 39%; height: 60dvh; display: flex; flex-direction: column;"
 				>
 					<p class="card-header">Overview</p>
 					<div style="flex: 1; min-height: 0; overflow-y: auto">
-						<VisSeparateOverview fullNet={fullNet as any} maxHeight={480} />
+						<VisSeparateOverview fullNet={fullNet as any}/>
 					</div>
 				</div>
 			</div>
 			<!-- filtered sender-receiver net -->
-			<div style="display: flex; align-items: flex-start; gap: 1%; width: 100%;">
+			<div style="display: flex; align-items: stretch; gap: 1%; width: 100%; height: 60dvh;">
 				<div
 					class="card border-primary mb-3"
-					style="width: 50%; height: 550px; display: flex; flex-direction: column;"
+					style="width: 50%; height: 100%; display: flex; flex-direction: column; min-height: 0;"
 				>
 					<ul class="nav nav-tabs" role="tablist">
 						<li class="nav-item" role="presentation">
@@ -248,59 +248,51 @@
 								aria-expanded="false">...</a
 							>
 							<div class="dropdown-menu" data-bs-popper="static">
-								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.CT = !$aesSettings.CT)}
-									>CellTypes color</a
-								>
+								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.CT = !$aesSettings.CT)}>CellTypes color</a>
 								<div class="dropdown-divider"></div>
-								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.LR = 'viridis')}
-									>LR viridis</a
-								>
-								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.LR = 'volcano')}
-									>LR volcano</a
-								>
-								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.LR = 'reset')}
-									>LR reset</a
-								>
+								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.LR = 'viridis')}>LR viridis</a>
+								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.LR = 'volcano')}>LR volcano</a>
+								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.LR = 'reset')}>LR reset</a>
 								<div class="dropdown-divider"></div>
-								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.TF = 'endShape')}
-									>TFL action</a
-								>
-								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.TF = 'reset')}
-									>TFL reset</a
-								>
+								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.TF = 'endShape')}>TFL action</a>
+								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.TF = 'reset')}>TFL reset</a>
 								<div class="dropdown-divider"></div>
-								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.groupNodes = !$aesSettings.groupNodes)}
-									>Group Nodes</a
-								>
+								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.groupNodes = !$aesSettings.groupNodes)}>Group Nodes</a>
 							</div>
 						</li>
 					</ul>
-					<div id="tabContainer" class="tab-content" style="flex: 1; min-height: 0; overflow: hidden;">
-						<div class="tab-pane fade show active" id="network-zoom" role="tabpanel" style="height: 100%;">
+					<div id="tabContainer" class="tab-content" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+						<div class="tab-pane fade show active" id="network-zoom" role="tabpanel" style="flex: 1; min-height: 0; height: 100%;">
 							<NetworkGraphZoom {networkData} />
 						</div>
-						<div class="tab-pane fade" id="network-circular" role="tabpanel" style="height: 100%;">
+						<div class="tab-pane fade" id="network-circular" role="tabpanel" style="flex: 1; min-height: 0; height: 100%;">
 							<NetworkCircular {networkData} />
 						</div>
-						<div class="tab-pane fade" id="network-hive" role="tabpanel" style="height: 100%;">
+						<div class="tab-pane fade" id="network-hive" role="tabpanel" style="flex: 1; min-height: 0; height: 100%;">
 							<p style="margin: 1rem;">Hive layout coming soon...</p>
 						</div>
 					</div>
 				</div>
 				<div
 					class="card border-primary mb-3"
-					style="width: 49%; height: 550px; display: flex; flex-direction: column;"
+					style="width: 49%; height: 100%; display: flex; flex-direction: column; min-height: 0;"
 				>
-					{#if $selectedNodeName}
-						<p class="card-header">Detailed Tree for {$selectedNodeName}</p>
-						<NetworkTree />
-					{/if}
+					<p class="card-header">
+						{#if $selectedNodeName}Detailed Tree for {$selectedNodeName}{:else}Detailed Tree{/if}
+        			</p>
+        			<div style="flex: 1; min-height: 0;">
+						{#if $selectedNodeName}
+							<NetworkTree />
+						{:else}
+							<p style="margin: 1rem; color: #888;">Select a node to see its tree.</p>
+						{/if}
+					</div>
 				</div>
 			</div>
 			<!-- info boxes -->
 			<div
 				class="card border-info mb-3"
-				style="max-width: 30%; display: inline-block; margin-right: 1rem;"
+				style="max-width: 30%; display: inline-block; margin-right: 1rem; "
 			>
 				<div class="card-header">Full Network Stats</div>
 				<div class="card-body">

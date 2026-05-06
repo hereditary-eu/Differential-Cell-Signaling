@@ -126,163 +126,6 @@ export function highlightNode(selectedId: string, links: any, node: d3.Selection
         );
     }
 
-// export function to draw legend of moltype and celltype
-// to do: make same size triangle and square.. more similar to parameters used for plotting
-export function drawLegend(
-    svg: SVGSVGElement,
-    colorScale: d3.ScaleOrdinal<string, any, string>,
-    aesLRMapping: 'reset' | 'viridis' | 'volcano',
-    aesTFMapping: 'reset' | 'endShape',
-    sender: string,
-    receiver: string,
-    colorCT: boolean = true,
-    symbolSize: number = 6,
-    spacing: number = 7,
-    fontSize: number = 4,
-    full_net: boolean = false
-) {
-    const g = d3
-        .select(svg)
-        .append("g")
-        .attr("class", "legend")
-        .attr("transform", "translate(5, 10)");
-    // cell type legend
-    // if (colorCT) {
-        g.append("text")
-            .attr("class", "legend-title")
-            .attr("x", -1)
-            .attr("y", -3) // adjust this for distance from legend
-            .style("font-size", `${fontSize + 1}px`)
-            .text('Cell types:');
-    const items = colorScale.domain().filter((i) => i === sender || i === receiver);
-    const group = g
-        .selectAll("g.legend-item")
-        .data(items)
-        .enter()
-        .append("g")
-        .attr("class", "legend-item")
-        .attr("transform", (_, i) => `translate(0, ${i * spacing})`);
-    group
-        .append("rect")
-        .attr("width", symbolSize)
-        .attr("height", symbolSize)
-        .attr("fill", d => colorScale(d));
-    group
-        .append("text")
-        .attr("x", symbolSize + 4)
-        .attr("y", symbolSize / 2)
-        .attr("dominant-baseline", "middle")
-        .style("font-size", `${fontSize}px`)
-        .text(d => d);
-    // } else {
-    //     const items = [];
-    // }
-    //moltype legend
-    const m = d3.select(svg).append("g").attr("class", "legend").attr("transform", `translate(5, ${20 + items.length * spacing + 2})`);
-    m.append("text")
-        .attr("class", "legend-title")
-        .attr("x", -1)
-        .attr("y", -5) // adjust this for distance from legend
-        .style("font-size", `${fontSize + 1}px`)
-        .text('Molecule:');
-    const moltypes = ['TF', 'ligand', 'receptor'];
-    const moltypeGroup = m
-        .selectAll("g.moltype-legend-item")
-        .data(moltypes)
-        .enter()
-        .append("g")
-        .attr("class", "moltype-legend-item")
-        .attr("transform", (_, i) => `translate(3, ${i * spacing})`);
-    moltypeGroup
-        .append("path")
-        .attr("d", d3.symbol().type((d) => {
-            if (d === 'TF') return d3.symbolCircle;
-            else if (d === 'ligand') return d3.symbolTriangle;
-            else if (d === 'receptor') return d3.symbolSquare;
-            else return d3.symbolCircle;
-        }).size(symbolSize*3))
-        .attr("fill", "black");
-    moltypeGroup
-        .append("text")
-        .attr("x", symbolSize + 0)
-        .attr("y", symbolSize / 12)
-        .attr("dominant-baseline", "middle")
-        .style("font-size", `${fontSize}px`)
-        .text(d => d);
-    if (!full_net) {
-        // LR legend
-        // let offsetY = 50 + ( colorCT ? items.length * spacing : 0 );
-        let offsetY = 50 + items.length * spacing ;
-        if (aesLRMapping !== 'reset') {
-            const lrLegend = d3.select(svg).append("g").attr("class", "legend").attr("transform", `translate(5, ${offsetY})`);
-            lrLegend.append("text")
-            .style("font-size", `${fontSize + 1}px`)
-            .text("LR diff.:");
-            const data = [
-            { label: "Up", color: aesLRMapping === 'volcano' ? "#b2182b" : d3.interpolateViridis(1) },
-            { label: "Down", color: aesLRMapping === 'volcano' ? "#2166ac" : d3.interpolateViridis(0) }
-            ];
-            const group = lrLegend
-            .selectAll("g.lr-item")
-            .data(data)
-            .enter()
-            .append("g")
-            .attr("transform", (_, i) => `translate(0, ${(i + 1) * spacing})`);
-
-            group.append("line")
-                .attr("x1", 0)
-                .attr("x2", symbolSize + 3)
-                .attr("stroke-width", 2)
-                .attr("stroke", d => d.color);
-
-            group.append("text")
-                .attr("x", symbolSize + 6)
-                .attr("y", 0)
-                .attr("dominant-baseline", "middle")
-                .style("font-size", `${fontSize}px`)
-                .text(d => d.label);
-
-            offsetY += 25; // add space before tfl legend
-        }
-        // TFL legend
-        if (aesTFMapping === 'endShape') {
-            const tfLegend = d3.select(svg)
-                .append("g")
-                .attr("class", "legend")
-                .attr("transform", `translate(5, ${offsetY})`);
-            tfLegend.append("text")
-                .style("font-size", `${fontSize + 1}px`)
-                .text("TF regulation:");
-            const data = [
-                { label: "Promoting", marker: "url(#arrow)" },
-                { label: "Inhibiting", marker: "url(#Tblunt)" }
-            ];
-            const group = tfLegend
-                .selectAll("g.tf-item")
-                .data(data)
-                .enter()
-                .append("g")
-                .attr("transform", (_, i) => `translate(0, ${(i + 1) * spacing})`);
-
-            group.append("line")
-                .attr("x1", 0)
-                .attr("x2", 10)
-                .attr("y1", 0)
-                .attr("y2", 0)
-                .attr("stroke", "#999")
-                .attr("stroke-width", 0.5)
-                .attr("marker-end", d => d.marker)
-                .attr("fill", "none");
-
-            group.append("text")
-                .attr("x", symbolSize + 6)
-                .attr("y", 0)
-                .attr("dominant-baseline", "middle")
-                .style("font-size", `${fontSize}px`)
-                .text(d => d.label);
-                }
-            }
-}
 export function trimPath(source: { x: number; y: number }, target: { x: number; y: number }, r = 12) {
 			const dx = target.x - source.x;
 			const dy = target.y - source.y;
@@ -327,7 +170,6 @@ export function defineMarkers(
     }
 
 export function resetNodesSize (nodeSelection: any, nodeSize = NODE_SIZES) {
-    console.log('called resetNodesSize')    
     nodeSelection.select('circle').attr('r', nodeSize.TF.base);
     nodeSelection.selectAll('rect')
             .attr('width', nodeSize.receptor.base)
@@ -479,7 +321,7 @@ export function applyCycleHighlight(
 
     nodeSelection.selectAll('.cycle-label').remove();
     nodeSelection.selectAll('.cycle-ring').remove();
-    
+
     nodeSelection.each(function (this: SVGGElement, d: any) {
         const g = d3.select(this);
         const inCycle = normalizedIds.has(String(d.id));

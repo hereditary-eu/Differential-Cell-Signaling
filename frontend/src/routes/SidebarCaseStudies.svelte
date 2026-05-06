@@ -132,7 +132,7 @@
 		left: 100%;
 		top: 50%;
 		transform: translateY(-50%);
-		transform: translateX(-40%);
+		transform: translateX(-96%);
 		margin-left: 0px;
 		width: max-content;
 		max-width: 250px;

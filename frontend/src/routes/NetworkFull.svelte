@@ -7,9 +7,11 @@
 	let svgEl: SVGSVGElement;
 	let simulation: d3.Simulation<any, undefined>;
 	let metric: 'betweenness' | 'pagerank' = 'betweenness';
+	let resizeObserver: ResizeObserver;
 
-	const W = 900;
-	const H = 380;
+	let svgW = 900;
+	let svgH = 380;
+	const LEGEND_COL_W = 130; //pixels width for legend
 
 	function buildSizeScale(nodes: any[], key: 'betweenness' | 'pagerank') {
 		const extent = d3.extent(nodes, (d) => d[key]) as [number, number];
@@ -34,46 +36,57 @@
 		svg: d3.Selection<SVGSVGElement, unknown, null, undefined>,
 		sizeScale: d3.ScalePower<number, number>,
 		threshold: number,
-		topMols: string[]
+		topMols: string[],
+		W: number,
+		H: number
 	) {
+
+		const colW = Math.max(80, Math.min(LEGEND_COL_W, W * 0.16));
+		const cx = colW * 0.55;
+		const halfW = colW * 0.3;
+
 		const g = svg.append('g').attr('transform', `translate(14, -100)`);
 
 		// title
+		const fontSize = Math.max(10, Math.min(14, H * 0.036));
 		g.append('text')
 			.attr('x', 0)
 			.attr('y', 0)
-			.attr('font-size', '14px')
+			.attr('font-size', `${fontSize}px`)
 			.attr('font-weight', 500)
 			.attr('fill', '#666')
 			.text(metric === 'betweenness' ? 'Betweenness' : 'PageRank');
 
 		// outlier legend dot
-		g.append('circle').attr('cx', 6).attr('cy', 20).attr('r', 5).attr('fill', '#e03333');
+		const dotY = fontSize + 12
+		g.append('circle').attr('cx', 5).attr('cy', dotY).attr('r', 4).attr('fill', '#e03333');
 		g.append('text')
-			.attr('x', 16)
-			.attr('y', 20)
+			.attr('x', 13)
+			.attr('y', dotY)
 			.attr('dominant-baseline', 'middle')
-			.attr('font-size', '12px')
+			.attr('font-size', `${Math.max(9, fontSize-2)}px`)
 			.attr('fill', '#555')
 			.text(threshold != null ? `Outlier (> ${threshold.toFixed(4)})` : 'outlier');
 
 		// size legend
+		const sLegendY = dotY + 20;
 		const domain = sizeScale.domain();
 		const mid = (domain[0] + domain[1]) / 2;
+		const spacing = (colW - 10) / 2;
 		[domain[0], mid, domain[1]].forEach((v, i) => {
 			const r = sizeScale(v);
-			const x = i * 46 + 6;
+			const x = i * spacing + 5;
 			g.append('circle')
 				.attr('cx', x)
-				.attr('cy', 68 - r)
+				.attr('cy', sLegendY + 10 - r)
 				.attr('r', r)
 				.attr('fill', '#888')
 				.attr('fill-opacity', 0.6);
 			g.append('text')
 				.attr('x', x)
-				.attr('y', 80)
+				.attr('y', sLegendY + 22)
 				.attr('text-anchor', 'middle')
-				.attr('font-size', '12px')
+				.attr('font-size', `${Math.max(9, fontSize - 2)}px`)
 				.attr('fill', '#777')
 				.text(['Low', 'Mid', 'High'][i]);
 		});
@@ -83,11 +96,9 @@
 			.map((d) => ({ v: d[metric] as number, outlier: isOutlier(d, metric) }))
 			.filter((d) => d.v != null);
 
-		const VPAD_TOP = 100; // y-pixel where violin top starts (below legend)
-		const VPAD_BOT = 5; // bottom margin inside the SVG
-		const violinH = H - VPAD_TOP - VPAD_BOT;
-		const cx = 70; // horizontal centre of violin in the legend column
-		const halfW = 35; // max half-width of violin body
+		const VPAD_TOP = sLegendY + 34; // y-pixel where violin top starts (below legend)
+		const VPAD_BOT = 6; // bottom margin inside the SVG
+		const violinH = Math.max(60, H - VPAD_TOP - VPAD_BOT - (topMols ? topMols.length * 18 + 22 : 0));
 
 		const yScale = d3
 			.scaleLinear()
@@ -123,8 +134,7 @@
 			.attr('d', area)
 			.attr('fill', '#ddd')
 			.attr('stroke', '#aaa')
-			.attr('stroke-width', 0.8)
-			.attr('transform', `translate(-14, 0)`);
+			.attr('stroke-width', 0.8);
 
 		// IQR box
 		const sorted = values.map((d) => d.v).sort(d3.ascending);
@@ -132,7 +142,7 @@
 		const q3 = d3.quantile(sorted, 0.75)!;
 		const med = d3.quantile(sorted, 0.5)!;
 		g.append('rect')
-			.attr('x', cx - halfW * 0.35 - 14)
+			.attr('x', cx - halfW * 0.35)
 			.attr('y', yScale(q3))
 			.attr('width', halfW * 0.7)
 			.attr('height', yScale(q1) - yScale(q3))
@@ -140,8 +150,8 @@
 			.attr('stroke', '#555')
 			.attr('stroke-width', 0.8);
 		g.append('line')
-			.attr('x1', cx - halfW * 0.35 - 14)
-			.attr('x2', cx + halfW * 0.35 - 14)
+			.attr('x1', cx - halfW * 0.35)
+			.attr('x2', cx + halfW * 0.35)
 			.attr('y1', yScale(med))
 			.attr('y2', yScale(med))
 			.attr('stroke', '#222')
@@ -150,8 +160,8 @@
 		// threshold line
 		if (threshold != null) {
 			g.append('line')
-				.attr('x1', cx - halfW - 14)
-				.attr('x2', cx + halfW - 14)
+				.attr('x1', cx - halfW)
+				.attr('x2', cx + halfW)
 				.attr('y1', yScale(threshold))
 				.attr('y2', yScale(threshold))
 				.attr('stroke', '#e03333')
@@ -164,7 +174,7 @@
 		const jitter = d3.randomNormal.source(rng)(0, halfW * 0.22);
 		values.forEach((d) => {
 			g.append('circle')
-				.attr('cx', cx + jitter() - 14)
+				.attr('cx', cx + jitter())
 				.attr('cy', yScale(d.v))
 				.attr('r', 1.8)
 				.attr('fill', d.outlier ? '#e03333' : '#333')
@@ -173,44 +183,47 @@
 
 		// y-axis (right side of violin)
 		const axis = d3.axisRight(yScale).ticks(4).tickFormat(d3.format('.2~e'));
-
-		const rowH = 16,
-			rowGap = 6;
-		g.append('text')
-			.text('Top 5 Molecules:')
-			.attr('y', violinH + VPAD_TOP + VPAD_BOT * 7);
-		const rows = g
-			.selectAll('.mol-row')
-			.data(topMols)
-			.join('g')
-			.attr('class', 'mol-row')
-			.attr(
-				'transform',
-				(d, i) => `translate(0, ${violinH + VPAD_TOP + VPAD_BOT * 7 + 18 + i * (rowH + rowGap)})`
-			);
-		rows
-			.append('text')
-			.attr('y', rowH / 2)
-			.text((d, i) => ` ${i + 1}. ${d}`);
-
 		g.append('g')
-			.attr('transform', `translate(${cx + halfW - 14}, 0)`)
+			.attr('transform', `translate(${cx + halfW}, 0)`)
 			.call(axis)
 			.call((ax) => {
-				ax.selectAll('text').attr('font-size', '12px').attr('fill', '#888');
+				ax.selectAll('text').attr('font-size', `${Math.max(9, fontSize - 2)}px`).attr('fill', '#888');
 				ax.selectAll('line,path').attr('stroke', '#ccc');
 			});
-	}
+		if (topMols?.length) {
+			const listY = VPAD_TOP + violinH + 20;
+			const rowH = Math.max(14, Math.min(18, H * 0.04));
+			g.append('text')
+				.attr('x', 0)
+				.attr('y', listY)
+				.attr('font-size', `${Math.max(9, fontSize - 2)}px`)
+				.attr('fill', '#555')
+				.text('Top 5:');
 
+			topMols.forEach((mol, i) => {
+				g.append('text')
+					.attr('x', 0)
+					.attr('y', listY + 14 + i * rowH)
+					.attr('font-size', `${Math.max(9, fontSize - 2)}px`)
+					.attr('fill', '#444')
+					.text(`${i + 1}. ${mol}`);
+			});
+		}
+	}
 	function render() {
 		if (!fullNet?.nodes?.length) return;
 		simulation?.stop();
+		
+		const W = svgW;
+		const H = svgH;
+		const netW = W;
 
 		const nodes = fullNet.nodes.map((d) => ({ ...d }));
 		const links = fullNet.links.map((d) => ({ ...d }));
 		const sizeScale = buildSizeScale(nodes, metric);
 		const threshold = getThreshold(metric);
 		const topMols = getTopMols(metric);
+		console.log(topMols);
 
 		const svg = d3.select(svgEl);
 		svg.selectAll('*').remove();
@@ -263,7 +276,7 @@
 					.strength(0.3)
 			)
 			.force('charge', d3.forceManyBody().strength(-25).distanceMax(140))
-			.force('center', d3.forceCenter(W / 2, H / 2))
+			.force('center', d3.forceCenter( netW / 2, H / 2))
 			.force(
 				'collide',
 				d3.forceCollide((d: any) => sizeScale(d[metric] ?? 0) + 1)
@@ -286,7 +299,7 @@
 		);
 
 		// legend + violin drawn on top of the zoom layer, pinned to SVG coords
-		drawLegendAndViolin(svg, sizeScale, threshold, topMols);
+		drawLegendAndViolin(svg, sizeScale, threshold, topMols, W, H);
 	}
 
 	function switchMetric(m: 'betweenness' | 'pagerank') {
@@ -295,8 +308,21 @@
 	}
 
 	$: if (fullNet?.nodes?.length) render();
-	onMount(() => render());
-	onDestroy(() => simulation?.stop());
+	onMount(() => {
+		resizeObserver = new ResizeObserver((entries) => {
+			for (const entry of entries) {
+				const { width, height } = entry.contentRect;
+				if (width > 0 && height > 0) {
+					svgW = width;
+					svgH = height;
+					render();
+				}
+			}
+		});
+		resizeObserver.observe(svgEl);
+		render();
+	});
+	onDestroy(() => { simulation?.stop(); resizeObserver?.disconnect(); });
 </script>
 
 <div

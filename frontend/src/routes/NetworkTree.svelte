@@ -33,7 +33,6 @@
 			);
 			const data = await res.json();
 			neighborhoodData.set(data);
-			console.log($neighborhoodData);
 		} catch (err) {
 			console.error('Error fetching neighborhood data:', err);
 		}
@@ -211,7 +210,7 @@
 					let end = { x: d.target.x, y: d.target.y };
 					if (d.type === 'TFL') {
 						console.log('gonna trim em all')
-						end = trimPath(d.source, d.target, 60); // this is evaluated but does not work...
+						end = trimPath(d.source, d.target, 90); // this is evaluated but does not work...
 					}
 					const dx = d.target.x - d.source.x;
 					const dy = d.target.y - d.source.y;
