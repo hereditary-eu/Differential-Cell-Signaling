@@ -1,44 +1,12 @@
 // define here the common variables and functions for network visualizations
 import * as d3 from 'd3';
 
-export const width = 250;
-export const height = 200;
-const initialScale = 0.18;
-const initialX = width / 2;
-const initialY = height / 2.4;
-
 const NODE_SIZES = {
 	TF: { base: 7, highlight: 12 },
-	ligand: { base: 80, highlight: 200 },
+	ligand: { base: 90, highlight: 200 },
 	receptor: { base: 12, highlight: 18 }
 };
 
-export interface ZoomOptions {
-    scaleExtent?: [number, number];
-    wheelSensitivity?: number;
-    initialTransform?: d3.ZoomTransform;
-}
-export function zoomBehavior(
-    zoomLayer: d3.Selection<SVGGElement, unknown, null, undefined>,
-    options: ZoomOptions = {}
-) {
-    const {
-        scaleExtent = [0.01, 10],
-        wheelSensitivity = 0.002,
-        initialTransform = d3.zoomIdentity.translate(initialX, initialY).scale(initialScale)
-    } = options;
-
-    const zoom = d3.zoom<SVGSVGElement, unknown>()
-        .scaleExtent(scaleExtent)
-        .wheelDelta((event) => -event.deltaY * wheelSensitivity)
-        .on('zoom', (event) => {
-            zoomLayer.attr('transform', event.transform);
-        });
-
-    return { zoom, initialTransform };
-}
-
-// export function to map moltype to shape
 export function drawNode(
     selection: d3.Selection<any, any, any, any>,
     colorScale: d3.ScaleOrdinal<string, string, string>,
@@ -48,22 +16,20 @@ export function drawNode(
 		selection.each(function (d: any) {
 			const g = d3.select(this);
 			if (d.moltype === 'TF') {
-				g.append('circle').attr('r', NODE_SIZES.TF.base).attr('fill', color ? colorScale(d.celltype): '#a9a9a9');
+				g.append('circle').attr('r', nodeSize.TF.base).attr('fill', color ? colorScale(d.celltype): '#a9a9a9');
 			} else if (d.moltype === 'ligand') {
 				g.append('path')
-					.attr('d', d3.symbol().type(d3.symbolTriangle).size(NODE_SIZES.ligand.base))
+					.attr('d', d3.symbol().type(d3.symbolTriangle).size(nodeSize.ligand.base))
 					.attr('fill', color ? colorScale(d.celltype): '#a9a9a9');
 			} else if (d.moltype === 'receptor') {
 				g.append('rect')
-					.attr('x', -NODE_SIZES.receptor.base / 2)
-					.attr('y', -NODE_SIZES.receptor.base / 2)
-					.attr('width', NODE_SIZES.receptor.base)
-					.attr('height', NODE_SIZES.receptor.base)
+					.attr('x', -nodeSize.receptor.base / 2)
+					.attr('y', -nodeSize.receptor.base / 2)
+					.attr('width', nodeSize.receptor.base)
+					.attr('height', nodeSize.receptor.base)
 					.attr('fill', color ? colorScale(d.celltype): '#a9a9a9');
 			}
 		});
-        // return selection;
-        // without this, returns void! eventually add return selection for chaining
 	}
 
 // interpolateViridis wants values between 0 and 1 -> do minmax scale
@@ -73,37 +39,30 @@ export function aesEdge(
     aesLRMapping: 'reset' | 'viridis' | 'volcano',
     aesTFMapping: 'reset' | 'endShape'
 ) {
-        selection.each(function (d: any) {
-            const g = d3.select(this);
-            g.attr('stroke', '#999'); // default color for other edges
-            if (d.type === 'LR') {
-                if (aesLRMapping === 'viridis') {
-                    const norm_weight = (d.weight + 1) / 2; // assuming [-1,1]
-                    g.attr('stroke', d3.interpolateViridis(norm_weight));
-                } else if (aesLRMapping === 'volcano') {
-                    if (d.weight < 0) {
-                        g.attr('stroke', '#2166ac'); // blue for under-activation
-                    } else {
-                        g.attr('stroke', '#b2182b'); //'#8B0000'); // darkred for over-activation
-                    }
-                }
-                g.attr('opacity', 0.9);
-                
-            } else if (d.type === 'TFL') {
-                if (aesTFMapping === 'endShape') {
-                    if (d.weight < 0) {
-                        // blunt end
-                        g.attr('marker-end', 'url(#Tblunt)');
-                    } else {
-                        // arrow end
-                        g.attr('marker-end', 'url(#arrow)'); 
-                    }
-            }
-        }
-        });
+    selection.attr('stroke', '#999').attr('opacity', 0.9).attr('marker-end', null)
+    const lrEdges = selection.filter((d: any) => d.type === 'LR');
+    if (aesLRMapping === 'viridis') {
+        lrEdges.attr('stroke', (d: any) => d3.interpolateViridis((d.weight + 1) / 2)) // assuming [-1,1]
+    } else if (aesLRMapping === 'volcano') {
+        lrEdges.attr('stroke', (d: any) => (d.weight < 0 ? '#2166ac' : '#b2182b')) // blue for under-activation //'#8B0000'); // darkred for over-activation
+    }     
+    if (aesTFMapping === 'endShape') {
+        selection.filter((d: any) => d.type === 'TFL').attr('marker-end', (d: any) => d.weight < 0 ? 'url(#Tblunt)' : 'url(#arrow)')
+    }    
 }
 
-
+export function updateNodeColors(nodeSelection: d3.Selection<any, any, any, any>, colorScale: d3.ScaleOrdinal<string, string, string>, aesSettings: any) {
+		if (!nodeSelection) return;
+		nodeSelection.each(function (this: any, d: any) {
+			const g = d3.select(this as Element);
+			const fill = aesSettings.CT ? colorScale(d.celltype) : '#a9a9a9';
+			g.select('circle, path, rect').attr('fill', fill);
+		});
+	}
+export function updateEdgesAes(linkSelection: d3.Selection<any, any, any, any>, aesSettings: any) {
+		if (!linkSelection) return;
+		linkSelection.call((sel: any) => aesEdge(sel, aesSettings.LR, aesSettings.TF));
+	}
 // export function to be called when a node is CLICKED (it's not related to sidebarSearch)
 export function highlightNode(selectedId: string, links: any, node: d3.Selection<any, any, any, any>, link: d3.Selection<any, any, any, any>) {
         const adjacency: Record<string, Set<string>> = {};

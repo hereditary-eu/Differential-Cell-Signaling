@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { selectedComparison, highlightedNode, selectedNode, selectedNodeName } from '$lib/stores';
+	import { highlightedNode, selectedNode, selectedNodeName, filteringQueryStr } from '$lib/stores';
 
 	const backend = import.meta.env.VITE_BACKEND_URL;
 
@@ -19,7 +19,7 @@
 		try {
 			// encodeURIcomponent escapes characters with UTF-8
 			const res = await fetch(
-				`${backend}/api/molecules_names_list?comparison=${$selectedComparison}&q=${encodeURIComponent(q)}`
+				`${backend}/api/molecules_names_list?${$filteringQueryStr}&q=${encodeURIComponent(q)}`
 			);
 			const data = await res.json();
 			suggestions = data.molecules ?? [];

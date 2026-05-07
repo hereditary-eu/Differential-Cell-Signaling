@@ -117,6 +117,12 @@
 					>
 						<div class="accordion-body">
 							<SidebarCaseStudies />
+								<br />
+									<p class="card-text" >
+										N. cell types: {$celltypes.length} <br />
+										Total nodes: {fullNet.total_nodes} <br />
+										Total links: {fullNet.total_links} <br />
+									</p>
 						</div>
 					</div>
 				</div>
@@ -142,6 +148,21 @@
 					>
 						<div class="accordion-body">
 							<SidebarFilter {loadFilteredData} />
+							<hr />
+							<ul>
+								<li>Filtered nodes: {networkData.stats.nNodes}</li>
+								<ul>
+									<li>Ligands: {networkData.stats.nLigands}</li>
+									<li>Receptors: {networkData.stats.nReceptors}</li>
+									<li>TFs: {networkData.stats.nTFs}</li>
+								</ul>
+								<li>Filtered links: {networkData.stats.nLinks}</li>
+								<ul>
+									<li>LR links: {networkData.stats.nLRLinks} </li>
+									<li>TFL links: {networkData.stats.nTFLLinks} </li>
+									<li>RTF links: {networkData.stats.nRTFLinks} </li>
+								</ul>
+							</ul>
 						</div>
 					</div>
 				</div>
@@ -277,7 +298,7 @@
 								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.TF = 'endShape')}>TFL action</a>
 								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.TF = 'reset')}>TFL reset</a>
 								<div class="dropdown-divider"></div>
-								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.groupNodes = !$aesSettings.groupNodes)}>Group Nodes</a>
+								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.groupNodes = !$aesSettings.groupNodes)}>Group TFs</a>
 							</div>
 						</li>
 					</ul>
@@ -309,55 +330,6 @@
 					</div>
 				</div>
 			</div>
-			<!-- info boxes -->
-			<div
-				class="card border-info mb-3"
-				style="max-width: 30%; display: inline-block; margin-right: 1rem; margin-top: 1rem;"
-			>
-				<div class="card-header">Full Network Stats</div>
-				<div class="card-body">
-					<p class="card-text">
-						N. cell types: {$celltypes.length} <br />
-						Total nodes: {fullNet.total_nodes} <br />
-						Total links: {fullNet.total_links} <br />
-					</p>
-				</div>
-			</div>
-			{#if networkData.nodes.length > 0}
-				<div
-					class="card border-info mb-3"
-					style="max-width: 18%; display: inline-block; margin-right: 1rem;"
-				>
-					<div class="card-header">Filtered nodes: {networkData.stats.nNodes}</div>
-					<div class="card-body">
-						<p class="card-text">
-							Ligands: {networkData.stats.nLigands} <br />
-							Receptors: {networkData.stats.nReceptors} <br />
-							TFs: {networkData.stats.nTFs} <br />
-						</p>
-					</div>
-				</div>
-				<div class="card border-info mb-3" style="max-width: 18%; display: inline-block;">
-					<div class="card-header">Filtered links: {networkData.stats.nLinks}</div>
-					<div class="card-body">
-						<p class="card-text">
-							LR links: {networkData.stats.nLRLinks} <br />
-							TFL links: {networkData.stats.nTFLLinks} <br />
-							RTF links: {networkData.stats.nRTFLinks} <br />
-						</p>
-					</div>
-				</div>
-				<br />
-			{:else}
-				<div
-					class="alert alert-info"
-					role="alert"
-					style="max-width: 40%; display: inline-block; vertical-align: top; margin-right: 1rem; margin-top: 1rem;"
-				>
-					Apply filters to see network statistics and visualization.
-				</div>
-			{/if}
-			<!-- end of info boxes -->
 		</main>
 		<!-- End of d-flex -->
 	</div>

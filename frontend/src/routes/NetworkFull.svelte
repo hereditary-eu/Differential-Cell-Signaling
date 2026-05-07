@@ -40,31 +40,19 @@
 		W: number,
 		H: number
 	) {
-
 		const colW = Math.max(80, Math.min(LEGEND_COL_W, W * 0.16));
 		const cx = colW * 0.55;
 		const halfW = colW * 0.3;
-
-		const g = svg.append('g').attr('transform', `translate(14, -100)`);
-
-		// title
+		const g = svg.append('g').attr('transform', `translate(14, 0)`);
 		const fontSize = Math.max(10, Math.min(14, H * 0.036));
-		g.append('text')
-			.attr('x', 0)
-			.attr('y', 0)
-			.attr('font-size', `${fontSize}px`)
-			.attr('font-weight', 500)
-			.attr('fill', '#666')
-			.text(metric === 'betweenness' ? 'Betweenness' : 'PageRank');
-
 		// outlier legend dot
-		const dotY = fontSize + 12
+		const dotY = fontSize + 12;
 		g.append('circle').attr('cx', 5).attr('cy', dotY).attr('r', 4).attr('fill', '#e03333');
 		g.append('text')
 			.attr('x', 13)
 			.attr('y', dotY)
 			.attr('dominant-baseline', 'middle')
-			.attr('font-size', `${Math.max(9, fontSize-2)}px`)
+			.attr('font-size', `${Math.max(9, fontSize - 2)}px`)
 			.attr('fill', '#555')
 			.text(threshold != null ? `Outlier (> ${threshold.toFixed(4)})` : 'outlier');
 
@@ -98,7 +86,10 @@
 
 		const VPAD_TOP = sLegendY + 34; // y-pixel where violin top starts (below legend)
 		const VPAD_BOT = 6; // bottom margin inside the SVG
-		const violinH = Math.max(60, H - VPAD_TOP - VPAD_BOT - (topMols ? topMols.length * 18 + 22 : 0));
+		const violinH = Math.min(
+			180,
+			H - VPAD_TOP - VPAD_BOT - (topMols ? topMols.length * 18 + 22 : 0)
+		);
 
 		const yScale = d3
 			.scaleLinear()
@@ -187,7 +178,9 @@
 			.attr('transform', `translate(${cx + halfW}, 0)`)
 			.call(axis)
 			.call((ax) => {
-				ax.selectAll('text').attr('font-size', `${Math.max(9, fontSize - 2)}px`).attr('fill', '#888');
+				ax.selectAll('text')
+					.attr('font-size', `${Math.max(9, fontSize - 2)}px`)
+					.attr('fill', '#888');
 				ax.selectAll('line,path').attr('stroke', '#ccc');
 			});
 		if (topMols?.length) {
@@ -213,7 +206,7 @@
 	function render() {
 		if (!fullNet?.nodes?.length) return;
 		simulation?.stop();
-		
+
 		const W = svgW;
 		const H = svgH;
 		const netW = W;
@@ -276,7 +269,7 @@
 					.strength(0.3)
 			)
 			.force('charge', d3.forceManyBody().strength(-25).distanceMax(140))
-			.force('center', d3.forceCenter( netW / 2, H / 2))
+			.force('center', d3.forceCenter(netW / 2, H / 2))
 			.force(
 				'collide',
 				d3.forceCollide((d: any) => sizeScale(d[metric] ?? 0) + 1)
@@ -297,8 +290,6 @@
 				d.fy = e.y;
 			})
 		);
-
-		// legend + violin drawn on top of the zoom layer, pinned to SVG coords
 		drawLegendAndViolin(svg, sizeScale, threshold, topMols, W, H);
 	}
 
@@ -322,7 +313,10 @@
 		resizeObserver.observe(svgEl);
 		render();
 	});
-	onDestroy(() => { simulation?.stop(); resizeObserver?.disconnect(); });
+	onDestroy(() => {
+		simulation?.stop();
+		resizeObserver?.disconnect();
+	});
 </script>
 
 <div

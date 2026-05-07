@@ -611,28 +611,26 @@ def get_node_neighborhood(
     }
 
 @app.get('/api/molecules_names_list')
-def get_molecules_names_list(comparison: str, q: str = ''):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    if q:
-        cur.execute(
-            """SELECT DISTINCT name, celltype, verbose_id, id
-               FROM nodes
-               WHERE comparison = %s AND name ILIKE %s
-               ORDER BY name ASC;""",
-            (comparison, f'%{q}%')
-        )
-    else:
-        cur.execute(
-            """SELECT DISTINCT name, celltype, verbose_id, id
-               FROM nodes
-               WHERE comparison = %s
-               ORDER BY name ASC;""",
-            (comparison,)
-        )
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
+def get_molecules_names_list(
+    comparison: str = None,
+    sender: str = None,
+    receiver: str = None,
+    reverse_sig: bool = False,
+    filter_intrascore: bool = False,
+    filter_pv: bool = False,
+    filter_inter: bool = False,
+    min_intrascore: float = 0.5,
+    max_intrascore: float = 1.0,
+    pv_thresh: float = 0.05,
+    focus_on_LR: bool = False,
+    inter_dir: Literal['up', 'down'] = 'up',
+    q: str = ''
+    ):
+    nodes, links = filter_network(
+        comparison, sender, receiver, reverse_sig, filter_intrascore, filter_pv, filter_inter,
+        min_intrascore, max_intrascore, pv_thresh, focus_on_LR, inter_dir
+    )
+    rows = [(n['name'], n['celltype'], n['verbose_id'], n['id']) for n in nodes if q.lower() in n['name'].lower()]
     return {
         'molecules': [
             {'name': r[0], 'celltype': r[1], 'verbose_id': r[2], 'id': r[3]}

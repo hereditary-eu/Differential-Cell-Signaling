@@ -13,17 +13,16 @@
 		selectedNodeName
 	} from '$lib/stores';
 	import {
-		zoomBehavior,
 		drawNode,
 		highlightNode,
 		deduplicateTFs,
 		aesEdge,
-		// defineMarkers,
 		trimPath,
 		applyHighlightSearch,
 		applyCycleHighlight,
-		resetNodesSize
-
+		resetNodesSize,
+		updateEdgesAes,
+		updateNodeColors
 	} from './utils';
 	import DrawNetLegend from './drawNetLegend.svelte';
 	export let networkData: { nodes: any[]; links: any[] };
@@ -83,6 +82,48 @@
 		const dr = Math.sqrt(dx * dx + dy * dy) * 0.99;
 		return `M ${d.source.x},${d.source.y} A ${dr},${dr} 0 0 1 ${end.x},${end.y}`;
 	}
+	
+	let prevGroupNodes: boolean | undefined = undefined;
+	let prevNetworkData: typeof networkData | undefined = undefined;
+	let prevCT: boolean | undefined = undefined;
+	let prevLR: string | undefined = undefined;
+	let prevTF: string | undefined = undefined;
+
+	$: {
+		const groupChanged = $aesSettings.groupNodes !== prevGroupNodes;
+		const dataChanged  = networkData !== prevNetworkData;
+
+		if (groupChanged || dataChanged) {
+			prevGroupNodes   = $aesSettings.groupNodes;
+			prevNetworkData  = networkData;
+			// also sync style trackers so their $: blocks don't fire after render
+			prevCT = $aesSettings.CT;
+			prevLR = $aesSettings.LR;
+			prevTF = $aesSettings.TF;
+			if (svgContainer && containerDiv) renderNetwork();
+		}
+	}
+
+	$: {
+		const ct = $aesSettings.CT;
+		if (ct !== prevCT && nodeSelection) {
+			prevCT = ct;
+			updateNodeColors(nodeSelection, $colorScale, $aesSettings);
+		}
+	}
+
+	$: {
+		const lr = $aesSettings.LR;
+		const tf = $aesSettings.TF;
+		if ((lr !== prevLR || tf !== prevTF) && linkSelection) {
+			prevLR = lr;
+			prevTF = tf;
+			updateEdgesAes(linkSelection, $aesSettings);
+		}
+	}
+
+	$: applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
+	$: applyCycleHighlight($highlightedCycle, nodeSelection, linkSelection);
 
 	const renderNetwork = () => {
 		if (!svgContainer || !containerDiv) return;
@@ -145,12 +186,10 @@
 			.style('background', 'transparent')
 			.style('cursor', 'grab');
 
-		// defineMarkers(svg); //still not working
-		
-		const zoomLayer = svg.append('g').attr('class', 'zoom-layer');
-		const { zoom } = zoomBehavior(zoomLayer);
+		const zoomLayer = svg.append('g');
+		const zoom = d3.zoom<SVGSVGElement, unknown>().on('zoom', (event) => {zoomLayer.attr('transform', event.transform)});
 		svg.call(zoom as any);
-		svg.call(zoom.transform as any, d3.zoomIdentity);
+		svg.call(zoom.transform, d3.zoomIdentity.translate( _W / 7, _H / 8).scale(0.9))
 
 		const circleGroup = zoomLayer.append('g').attr('class', 'guide-circles');
 		function syncCircles() {
@@ -387,35 +426,8 @@
 		applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
 	};
 
-	onMount(() => {
-		requestAnimationFrame(() => {
-			if (svgContainer?.closest('.tab-pane')?.classList.contains('show')) {
-			renderNetwork();
-			}
-		});
-
-		const handler = (e: any) => {
-			if (e.target?.getAttribute('href') === '#network-circular') {
-			requestAnimationFrame(() => renderNetwork());
-			}
-		};
-		document.addEventListener('shown.bs.tab', handler);
-		return () => document.removeEventListener('shown.bs.tab', handler);
-	});
-	onDestroy(() => {
-		simulation?.stop();
-	});
-	$: {
-		$aesSettings
-		if (
-			networkData?.nodes?.length &&
-			svgContainer?.closest('.tab-pane')?.classList.contains('show')
-		) {
-			renderNetwork();
-		}
-	}
-	$: applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
-	$: applyCycleHighlight($highlightedCycle, nodeSelection, linkSelection);
+	onMount(() => { requestAnimationFrame(() => renderNetwork()); });
+	onDestroy(() => { simulation?.stop(); });
 </script>
 <div style="position: relative; width: 100%; height: 100%;">
 	<DrawNetLegend />
