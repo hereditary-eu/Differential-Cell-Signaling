@@ -6,6 +6,7 @@
 
 	let svgEl: SVGSVGElement;
 	let simulation: d3.Simulation<any, undefined>;
+	let labelSimulation: d3.Simulation<any, undefined>;
 	let metric: 'betweenness' | 'pagerank' = 'betweenness';
 	let resizeObserver: ResizeObserver;
 
@@ -216,7 +217,11 @@
 		const sizeScale = buildSizeScale(nodes, metric);
 		const threshold = getThreshold(metric);
 		const topMols = getTopMols(metric);
-		console.log(topMols);
+
+		const outlierNodes = nodes.filter((d) => isOutlier(d, metric));
+		const metricExtent = d3.extent(outlierNodes, (d) => d[metric]) as [number, number];
+		const opacityScale = d3.scaleLinear().domain(metricExtent).range([0.5, 1.0]).clamp(true);
+		const labelFontScale = d3.scaleLinear().domain(metricExtent).range([3, 10]).clamp(true);
 
 		const svg = d3.select(svgEl);
 		svg.selectAll('*').remove();
@@ -249,13 +254,31 @@
 			.attr('stroke', (d) => (isOutlier(d, metric) ? '#a00' : '#555'))
 			.attr('stroke-width', (d) => (isOutlier(d, metric) ? 1.2 : 0.4));
 
-		node
-			.append('title')
+		node.append('title')
 			.text(
 				(d: any) =>
 					`${d.name} (${d.celltype})\nbetweenness: ${d.betweenness?.toFixed(4) ?? 'n/a'}\npagerank: ${d.pagerank?.toFixed(4) ?? 'n/a'}`
 			);
-
+		const labelLayer = zoomLayer.append('g').attr('class', 'label-layer');
+		const labelData = outlierNodes.map((d) => ({
+			nodeRef: d,
+			lx: d.x ?? 0,
+			ly: d.y ?? 0,
+		}));
+		const labels = labelLayer
+			.selectAll('text.outlier-label')
+			.data(labelData)
+			.join('text')
+			.attr('class', 'outlier-label')
+			.attr('text-anchor', 'middle')
+			.attr('dominant-baseline', 'middle')
+			.attr('pointer-events', 'none')
+			.attr('fill', '#780000')
+			.attr('font-weight', '600')
+			.attr('font-family', 'sans-serif')
+			.attr('font-size', (d) => `${labelFontScale(d.nodeRef[metric])}px`)
+			.attr('fill-opacity', (d) => opacityScale(d.nodeRef[metric]))
+			.text((d) => d.nodeRef.name);
 		simulation = d3
 			.forceSimulation(nodes)
 			.alphaDecay(0.04)
@@ -274,7 +297,25 @@
 				'collide',
 				d3.forceCollide((d: any) => sizeScale(d[metric] ?? 0) + 1)
 			);
-
+		labelSimulation = d3
+			.forceSimulation(labelData as any)
+			.alphaDecay(0.02)
+			.velocityDecay(0.4)
+			.force('anchor', () => {
+				for (const d of labelData as any[]) {
+					const nx = d.nodeRef.x ?? 0;
+					const ny = d.nodeRef.y ?? 0;
+					const dx = nx - d.x;
+					const dy = ny - d.y;
+					const dist = Math.sqrt(dx * dx + dy * dy);
+					const maxDist = 15;
+					const strength = Math.min(1, dist / maxDist) * 0.08;
+					d.vx += dx * strength;
+					d.vy += dy * strength;
+					// d.vy -= 0.4; // to prefer labels not on top of node
+				}
+			});
+		
 		simulation.on('tick', () => {
 			link
 				.attr('x1', (d: any) => d.source.x)
@@ -282,8 +323,13 @@
 				.attr('x2', (d: any) => d.target.x)
 				.attr('y2', (d: any) => d.target.y);
 			node.attr('cx', (d: any) => d.x).attr('cy', (d: any) => d.y);
+			labelSimulation.alpha(Math.max(labelSimulation.alpha(), simulation.alpha() * 0.6));
 		});
-
+		labelSimulation.on('tick', () => {
+			labels
+				.attr('x', (d: any) => d.x)
+				.attr('y', (d: any) => d.y);
+		});
 		node.call(
 			d3.drag<any, any>().on('drag', (e, d) => {
 				d.fx = e.x;

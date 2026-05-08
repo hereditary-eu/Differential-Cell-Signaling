@@ -52,9 +52,19 @@
 		if (isReceiver && mt === 'TF') return 3;
 		if (isReceiver && mt === 'ligand') return 4;
 		if (isSender && mt === 'receptor') return 5;
-		return 1.5;
+		return -1.5;
 	}
-
+// 	function rankLabel(rank: number, s: string, r: string): string {
+//     const meta = [
+//       `${s} · TF`,
+//       `${s} · Ligand`,
+//       `${r} · Receptor`,
+//       `${r} · TF`,
+//       `${r} · Ligand`,
+//       `${s} · Receptor`,
+//     ];
+//     return meta[rank] ?? '';
+//   }
 	function renderTree() {
 		if (!$neighborhoodData?.nodes?.length || !$neighborhoodData?.rootId) return;
 		if ($neighborhoodData?.nodes?.length <= 1) {
@@ -65,10 +75,10 @@
 
 		const W = containerDiv?.clientWidth || 600;
 		const H = containerDiv?.clientHeight || 500;
-
 		const PADDING = 20;
 		const numRanks = $reverseSig ? 4 : 6;
-		
+		const activeRanks = Array.from({ length: numRanks }, (_, i) => i);
+
 		const rankToFixed = (rank: number) =>
 			isHorizontal
 			? PADDING + (rank / (numRanks-1)) * (W - PADDING * 1.5 )
@@ -103,7 +113,6 @@
 			.zoom<SVGSVGElement, unknown>()
 			.scaleExtent([0.1, 20])
 			.on('zoom', (event) => zoomLayer.attr('transform', event.transform));
-
 		svg.call(zoom as any);
 
 		const nodeById = new Map(nodes.map((n) => [n.id, n]));
@@ -112,6 +121,49 @@
 			source: nodeById.get(l.source) ?? l.source,
 			target: nodeById.get(l.target) ?? l.target
 		}));
+
+		// const laneGroup = zoomLayer.append('g').attr('class', 'lanes');
+		// const s = $sender ?? 'Sender';
+		// const r = $receiver ?? 'Receiver';
+
+		// activeRanks.forEach((rank) => {
+		// const pos = rankToFixed(rank);
+		// const label = rankLabel(rank, s, r);
+
+		// if (isHorizontal) {
+		// 	laneGroup.append('line')
+		// 	.attr('x1', pos).attr('y1', 0)
+		// 	.attr('x2', pos).attr('y2', H)
+		// 	.attr('stroke', '#d0d0d0')
+		// 	.attr('stroke-width', 1)
+		// 	.attr('stroke-dasharray', '5 4');
+
+		// 	laneGroup.append('text')
+		// 	.attr('x', pos)
+		// 	.attr('y', H - 8)
+		// 	.attr('text-anchor', 'middle')
+		// 	.attr('font-size', '10px')
+		// 	.attr('fill', '#999')
+		// 	.attr('font-family', 'sans-serif')
+		// 	.text(label);
+		// } else {
+		// 	laneGroup.append('line')
+		// 	.attr('x1', 0).attr('y1', pos)
+		// 	.attr('x2', W).attr('y2', pos)
+		// 	.attr('stroke', '#d0d0d0')
+		// 	.attr('stroke-width', 1)
+		// 	.attr('stroke-dasharray', '5 4');
+
+		// 	laneGroup.append('text')
+		// 	.attr('x', 6)
+		// 	.attr('y', pos - 5)
+		// 	.attr('text-anchor', 'start')
+		// 	.attr('font-size', '10px')
+		// 	.attr('fill', '#999')
+		// 	.attr('font-family', 'sans-serif')
+		// 	.text(label);
+		// }
+		// });
 
 		const simulation = d3
 			.forceSimulation(nodes)
@@ -236,12 +288,15 @@
 		align-items: center;
 		justify-content: flex-end;
 		gap: 8px;
-		padding: 4px 8px;
+		padding: 2px 8px;
 		flex-shrink: 0;
 		border-bottom: 1px solid #e5e5e5;
 		background: white;
 		z-index: 10;
 	">
+		<p style="font-size: 12px; margin: 0; left-margin: 0; white-space: nowrap; font-weight: 500; text-align: left;">
+			{#if $selectedNodeName}{$selectedNodeName} Neighborhood{:else}Neighborhood View{/if}
+		</p>
 		<label for="input-maxSteps" style="font-size: 11px; margin: 0; white-space: nowrap;">max steps:</label>
 		<input
 			id="input-maxSteps"

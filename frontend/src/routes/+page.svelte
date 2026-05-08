@@ -318,9 +318,9 @@
 					class="card border-primary mb-3"
 					style="width: 49%; height: 100%; display: flex; flex-direction: column; min-height: 0;"
 				>
-					<p class="card-header">
+					<!-- <p class="card-header">
 						{#if $selectedNodeName}Detailed Tree for {$selectedNodeName}{:else}Detailed Tree{/if}
-        			</p>
+        			</p> -->
         			<div style="flex: 1; min-height: 0;">
 						{#if $selectedNodeName}
 							<NetworkTree />

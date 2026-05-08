@@ -72,17 +72,63 @@
 		if (ri < 0) return;
 		nodeBaseAngle.set(d.id, Math.atan2(d.y - cy(), d.x - cx()) - ringRotations[ri]);
 	}
-	function linkPath(d: any): string {
+	// function linkPath(d: any): string {
+	// 	const src = d.source;
+	// 	const end =
+	// 		d.type === 'TFL' && $aesSettings.TF === 'endShape'
+	// 			? trimPath(d.source, d.target, 10)
+	// 			: { x: d.target.x, y: d.target.y };
+	// 	// const dx = end.x - d.source.x;
+	// 	// const dy = end.y - d.source.y;
+	// 	// const dr = Math.sqrt(dx * dx + dy * dy) * 0.99;
+	// 	const beta = 0.15
+	// 	const cpx = cx() * beta + (src.x + end.x) / 2 * ( 1 - beta);
+	// 	const cpy = cy() * beta + (src.y + end.y) / 2 * ( 1 - beta);
+	// 	return `M ${src.x},${src.y} Q ${cpx},${cpy} ${end.x},${end.y}`;
+	// 	// return `M ${d.source.x},${d.source.y} A ${dr},${dr} 0 0 1 ${end.x},${end.y}`;
+	// }
+	const bundleLine = d3
+		.line<[number, number]>()
+		.x((p) => p[0])
+		.y((p) => p[1])
+		.curve(d3.curveBundle.beta(0.88)); // beta is how aggressively edges bundle
+		
+	function bundledPath(d: any): string {
+		const src = d.source;
 		const end =
 			d.type === 'TFL' && $aesSettings.TF === 'endShape'
-				? trimPath(d.source, d.target, 10)
-				: { x: d.target.x, y: d.target.y };
-		const dx = end.x - d.source.x;
-		const dy = end.y - d.source.y;
-		const dr = Math.sqrt(dx * dx + dy * dy) * 0.99;
-		return `M ${d.source.x},${d.source.y} A ${dr},${dr} 0 0 1 ${end.x},${end.y}`;
+			? trimPath(src, d.target, 10)
+			: { x: d.target.x, y: d.target.y };
+
+		const tgt = { x: end.x, y: end.y };
+		const srcRi = ringIndexOf(src);
+		const tgtRi = ringIndexOf(d.target);
+
+		let points: [number, number][];
+
+		const srcAngle = Math.atan2(src.y - cy(), src.x - cx());
+		const tgtAngle = Math.atan2(d.target.y - cy(), d.target.x - cx());
+		// midpoint radius: halfway between the two rings
+		const rMid = (ringRadii[srcRi] + ringRadii[tgtRi]) / 2;
+		// control point 1: at source angle, mid radius
+		const cp1 = {
+		x: cx() + rMid * Math.cos(srcAngle),
+		y: cy() + rMid * Math.sin(srcAngle),
+		};
+		// control point 2: at target angle, mid radius
+		const cp2 = {
+		x: cx() + rMid * Math.cos(tgtAngle),
+		y: cy() + rMid * Math.sin(tgtAngle),
+		};
+		points = [
+		[src.x, src.y],
+		[cp1.x, cp1.y],
+		[cp2.x, cp2.y],
+		[tgt.x, tgt.y],
+		];
+		return bundleLine(points) ?? '';
 	}
-	
+
 	let prevGroupNodes: boolean | undefined = undefined;
 	let prevNetworkData: typeof networkData | undefined = undefined;
 	let prevCT: boolean | undefined = undefined;
@@ -215,17 +261,18 @@
 					.strength(0.1)
 			)
 			.force('charge', d3.forceManyBody().strength(-23))
-			.force('collide', d3.forceCollide((d: any) => 14))
+			.force('collide', d3.forceCollide((d: any) => 10))
 			.force('center', d3.forceCenter(cx(), cy()));
 
 		const link = zoomLayer
 			.append('g')
 			.attr('fill', 'none')
-			.attr('stroke-opacity', 0.9)
 			.attr('stroke-width', 1)
 			.selectAll('path')
 			.data(simLinks)
 			.join('path')
+			.attr('stroke-opacity', (d: any) => (d.type === 'LR' ? 0.9 : 0.6))
+			.attr('mix-blend-mode', 'multiply') // for edges overlaps
 			.call((selection) => aesEdge(selection, $aesSettings.LR,$aesSettings.TF));
 
 
@@ -277,7 +324,7 @@
 				recordBaseAngle(d); // Record settled angle so subsequent rotations start from here
 			});
 			node.attr('transform', (d: any) => `translate(${d.x},${d.y})`);
-			link.attr('d', linkPath);
+			link.attr('d', bundledPath);
 		});
 
 		function reprojectRing(ri: number) {
@@ -285,7 +332,7 @@
 				if (ringIndexOf(d) === ri) projectNode(d);
 			});
 			node.attr('transform', (d: any) => `translate(${d.x},${d.y})`);
-			link.attr('d', linkPath);
+			link.attr('d', bundledPath);
 		}
 
 		const handleLayer = zoomLayer.append('g').attr('class', 'ring-handles');

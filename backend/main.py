@@ -32,10 +32,10 @@ def get_db_connection():
 
 def normalize_cycle(cycle: list) -> tuple:
     """Normalize a cycle to remove rotational duplicates."""
-    min_index = cycle.index(min(cycle))
-    rotated = cycle[min_index:] + cycle[:min_index]
-    reversed_rotated = [rotated[0]] + rotated[1:][::-1]
-    return tuple(min(rotated, reversed_rotated))
+    rotations = [cycle[i:] + cycle[:i] for i in range(len(cycle))]
+    rev = cycle[::-1]
+    rev_rotations = [rev[i:] + rev[:i] for i in range(len(rev))]
+    return tuple(min(rotations + rev_rotations))
 
 def build_graph(nodes: list, links: list) -> nx.DiGraph:
     """
@@ -64,16 +64,20 @@ def find_cycles(nodes: list, links: list, max_cycle_length: int = 10, max_cycles
     """
     if not nodes or not links:
         return {'cycles': [], 'nCycles': 0, 'truncated': False}
+    
     G = build_graph(nodes, links)
-
     #Johnson's algorithm for sparse graphs
     seen = set()
     cycles = []
     truncated = False
-    raw_gen = nx.simple_cycles(G)
 
-    for cycle in islice(raw_gen, max_cycle_length*10):
-        if len(cycle) <= 2 or len(cycle) > max_cycle_length:
+    for cycle in nx.simple_cycles(G):
+        if len(cycle) < 3 or len(cycle) > max_cycle_length:
+            continue
+        if not all( #check that the cycle is actually closed
+            G.has_edge(cycle[i], cycle[(i + 1) % len(cycle)])
+            for i in range(len(cycle))
+        ):
             continue
         key = normalize_cycle(cycle)
         if key in seen:
