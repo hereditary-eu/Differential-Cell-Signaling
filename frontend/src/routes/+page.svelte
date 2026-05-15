@@ -8,6 +8,7 @@
 	import FullNetwork from './NetworkFull.svelte';
 	import VisSeparateOverview from './OverviewVis.svelte';
 	import NetworkTree from './NetworkTree.svelte';
+	import GOEAResults from './GOEAresults.svelte';
 
 	import {
 		celltypes,
@@ -17,9 +18,10 @@
 		selectedComparison,
 		selectedNode,
 		selectedNodeName,
-		aesSettings
+		aesSettings,
+		goResults
 	} from '$lib/stores';
-
+	import type { GoResults } from '$lib/types';
 	const backend = import.meta.env.VITE_BACKEND_URL;
 
 	interface NetworkStats {
@@ -87,6 +89,15 @@
 			selectedNodeName.set(networkData.p_top3Mols[0]['name'])
 		} catch (err) {
 			console.error('Error loading data:', err);
+		}
+	}
+	function handleGoResults(data: GoResults | null) {
+		goResults.set(data);
+		// If new results arrived, scroll the GOEA panel into view 
+		if (data) {
+			setTimeout(() => {
+				document.getElementById('goea-results-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			}, 100);
 		}
 	}
 
@@ -244,11 +255,11 @@
 					style="width: 60%; height: 60dvh; display: flex; flex-direction: column;"
 				>
 					<p class="card-header">Full Network for {$selectedCaseStudy} : {$selectedComparison}</p>
-					<div style="flex: 1; min-height: 0; overflow-y: auto;">
+					<div style="flex: 1; min-height: 0; overflow-y: hidden;">
 						<FullNetwork {fullNet} />
 					</div>
 				</div>
-
+				<!-- overview -->
 				<div
 					class="card border-primary mb-3"
 					style="width: 39%; height: 60dvh; display: flex; flex-direction: column;"
@@ -330,6 +341,24 @@
 					</div>
 				</div>
 			</div>
+			<br />
+			{#if $goResults}
+				<div id="goea-results-panel" class="card border-primary mb-3" style="width: 100%;">
+					<p class="card-header d-flex align-items-center gap-2">
+						GProfiler ORA Enrichment Analysis Results
+							<span class="badge bg-success ms-2">{$goResults?.n_significant} significant terms</span>
+							{#if $goResults?.universe_warning}
+								<span
+									class="badge bg-warning text-dark ms-1"
+									title={$goResults.universe_warning}
+								>Universe warning</span>
+							{/if}
+					</p>
+					<div style="min-height: 200px;">
+						<GOEAResults />
+					</div>
+				</div>
+			{/if}
 		</main>
 		<!-- End of d-flex -->
 	</div>

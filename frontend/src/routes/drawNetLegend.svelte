@@ -2,7 +2,7 @@
 	import { colorScale, sender, receiver, aesSettings } from "$lib/stores";
 </script>
 
-<div style="
+<div id = "network-legend" style="
     position: absolute;
     top: 8px;
     left: 8px;

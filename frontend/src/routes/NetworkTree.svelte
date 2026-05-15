@@ -10,7 +10,7 @@
 		neighborhoodData,
 		filteringQueryStr
 	} from '$lib/stores';
-	import { aesEdge, drawNode, defineMarkers, trimPath, deduplicateTFs } from './utils';
+	import { aesEdge, drawNode, trimPath, deduplicateTFs } from './utils';
 	import GroupToggle from './GroupToggle.svelte';
 
 	let groupNodes = $state(true);
@@ -106,7 +106,7 @@
 			.style('background', 'transparent')
 			.style('cursor', 'grab');
 
-		defineMarkers(svg);
+		// defineMarkers(svg);
 
 		const zoomLayer = svg.append('g');
 		const zoom = d3
@@ -286,7 +286,7 @@
 	<div style="
 		display: flex;
 		align-items: center;
-		justify-content: flex-end;
+		// justify-content: flex-end;
 		gap: 8px;
 		padding: 2px 8px;
 		flex-shrink: 0;
@@ -294,7 +294,7 @@
 		background: white;
 		z-index: 10;
 	">
-		<p style="font-size: 12px; margin: 0; left-margin: 0; white-space: nowrap; font-weight: 500; text-align: left;">
+		<p style="font-size: 12px; margin: 0; margin-right: auto; white-space: nowrap; font-weight: 500; text-align: left;">
 			{#if $selectedNodeName}{$selectedNodeName} Neighborhood{:else}Neighborhood View{/if}
 		</p>
 		<label for="input-maxSteps" style="font-size: 11px; margin: 0; white-space: nowrap;">max steps:</label>

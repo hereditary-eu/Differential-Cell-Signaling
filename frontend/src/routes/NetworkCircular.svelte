@@ -25,6 +25,8 @@
 		updateNodeColors
 	} from './utils';
 	import DrawNetLegend from './drawNetLegend.svelte';
+	// import DownloadButton from './DownloadButton.svelte';
+
 	export let networkData: { nodes: any[]; links: any[] };
 
 	let svgContainer: SVGSVGElement;
@@ -169,7 +171,7 @@
 	}
 
 	$: applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
-	$: applyCycleHighlight($highlightedCycle, nodeSelection, linkSelection);
+	$: applyCycleHighlight($highlightedCycle, nodeSelection, linkSelection, $colorScale, $aesSettings);
 
 	const renderNetwork = () => {
 		if (!svgContainer || !containerDiv) return;
@@ -352,7 +354,7 @@
 
 		const resizeHandle = resizeGs
 			.append('circle')
-			.attr('r', 9)
+			.attr('r', 7)
 			.attr('cx', resizeX)
 			.attr('cy', resizeY)
 			.attr('fill', '#fff')
@@ -417,7 +419,7 @@
 		const rotGs = ringGs.append('g').attr('class', 'rotate-g');
 		const rotHandle = rotGs
 			.append('circle')
-			.attr('r', 9)
+			.attr('r', 7)
 			.attr('cx', rotX)
 			.attr('cy', rotY)
 			.attr('fill', '#fff')
@@ -475,9 +477,12 @@
 
 	onMount(() => { requestAnimationFrame(() => renderNetwork()); });
 	onDestroy(() => { simulation?.stop(); });
+
+	const getSvgEl = (): SVGSVGElement | null => svgContainer ?? null;
 </script>
 <div style="position: relative; width: 100%; height: 100%;">
 	<DrawNetLegend />
+	<!-- <DownloadButton {getSvgEl} /> -->
 	<div bind:this={containerDiv} style="width: 100%; height: 100%;">
 	<svg bind:this={svgContainer} style="width: 100%; height: 100%; display: block;"></svg>
 	</div>

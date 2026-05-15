@@ -1,13 +1,15 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi import Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import psycopg2
 import psycopg2.extras
-from typing import Literal
+from typing import Literal, List, Optional
 import statistics
 import networkx as nx
 from collections import Counter, defaultdict, deque
-from itertools import islice
+import pandas as pd
+from gprofiler import GProfiler
 
 app = FastAPI()
 origins = ['http://localhost:5173', 'http://127.0.0.1:5173'] #allow frontend to connect
@@ -355,9 +357,9 @@ def get_full_network(comparison: str):
             }
         }
 
-
 def filter_network(
     comparison: str = None,
+    # filter_celltypes: bool = True,
     sender: str = None,
     receiver: str = None,
     reverse_sig: bool = False,
@@ -368,17 +370,24 @@ def filter_network(
     max_intrascore: float = 1.0,
     pv_thresh: float = 0.05,
     focus_on_LR: bool = False,
-    inter_dir: Literal['up', 'down'] = 'up'):
+    inter_dir: Literal['up', 'down'] = 'up',
+    filterTFs: bool = False):
 
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     #get all potential nodes + filter by intrascore
+    # if filter_celltypes:
     node_query = """
         SELECT * FROM nodes
         WHERE comparison = %s AND celltype IN (%s, %s)
     """
     params = [comparison, sender, receiver]
-
+    # else:
+    # node_query = """
+    #     SELECT * FROM nodes
+    #     WHERE comparison = %s
+    # """
+    # params = [comparison]
     if filter_intrascore:
         node_query += """
             AND (intrascore BETWEEN %s AND %s OR intrascore IS NULL)
@@ -445,6 +454,10 @@ def filter_network(
     cur.execute(link_query, link_params)
     links = cur.fetchall()
 
+    if filterTFs:    #keep only TFs involved in TFL (i.e. derive from TF activity analysis)
+        sig_tf_ids = {l['source'] for l in links if l['type'] == 'TFL'}
+        links = [l for l in links if l['type'] == 'LR' or (l['type'] == 'RTF' and l['target'] in sig_tf_ids) or (l['type'] == 'TFL' and l['source'] in sig_tf_ids)]
+    
     #remove nodes that do NOT appear in any link
     if links:
         connected_ids = {l['source'] for l in links} | {l['target'] for l in links}
@@ -479,11 +492,12 @@ def get_filtered_network(
     max_intrascore: float = 1.0,
     pv_thresh: float = 0.05,
     focus_on_LR: bool = False,
-    inter_dir: Literal['up', 'down'] = 'up'
+    inter_dir: Literal['up', 'down'] = 'up',
+    filterTFs: bool = False
 ):
     nodes, links = filter_network(
         comparison, sender, receiver, reverse_sig, filter_intrascore, filter_pv, filter_inter,
-        min_intrascore, max_intrascore, pv_thresh, focus_on_LR, inter_dir
+        min_intrascore, max_intrascore, pv_thresh, focus_on_LR, inter_dir, filterTFs
     )
     stats = {
         'nNodes': len(nodes),
@@ -539,13 +553,14 @@ def get_node_neighborhood(
     max_intrascore: float = 1.0,
     pv_thresh: float = 0.05,
     focus_on_LR: bool = False,
-    inter_dir: Literal['up', 'down'] = 'up'
+    inter_dir: Literal['up', 'down'] = 'up',
+    filterTFs: bool = False
 ):
     root_id_int = int(root_id)
 
     result = filter_network(
         comparison, sender, receiver, reverse_sig, filter_intrascore, filter_pv, filter_inter,
-        min_intrascore, max_intrascore, pv_thresh, focus_on_LR, inter_dir
+        min_intrascore, max_intrascore, pv_thresh, focus_on_LR, inter_dir, filterTFs
     )
 
     # filter_network can return a dict on empty result
@@ -628,11 +643,12 @@ def get_molecules_names_list(
     pv_thresh: float = 0.05,
     focus_on_LR: bool = False,
     inter_dir: Literal['up', 'down'] = 'up',
+    filterTFs: bool = False,
     q: str = ''
     ):
     nodes, links = filter_network(
         comparison, sender, receiver, reverse_sig, filter_intrascore, filter_pv, filter_inter,
-        min_intrascore, max_intrascore, pv_thresh, focus_on_LR, inter_dir
+        min_intrascore, max_intrascore, pv_thresh, focus_on_LR, inter_dir, filterTFs
     )
     rows = [(n['name'], n['celltype'], n['verbose_id'], n['id']) for n in nodes if q.lower() in n['name'].lower()]
     return {
@@ -641,3 +657,252 @@ def get_molecules_names_list(
             for r in rows
         ]
     }
+
+
+#start implementing GO Enrichment analysis
+def get_genes_set(
+    comparison: str = None,
+    sender: str = None,
+    receiver: str = None,
+    reverse_sig: bool = False,
+    filter_intrascore: bool = False,
+    filter_pv: bool = False,
+    filter_inter: bool = False,
+    min_intrascore: float = 0.5,
+    max_intrascore: float = 1.0,
+    pv_thresh: float = 0.05,
+    focus_on_LR: bool = False,
+    inter_dir: Literal['up', 'down'] = 'up',
+    split_complexes: bool = False,
+    subunits_delimiter: str = ','
+    ) -> set:
+    nodes, links = filter_network(
+        comparison, sender, receiver, reverse_sig, filter_intrascore, filter_pv, filter_inter,
+        min_intrascore, max_intrascore, pv_thresh, focus_on_LR, inter_dir, filterTFs=True
+    )
+    gene_names = set()
+    if split_complexes:
+        for n in nodes:
+            for s in n['name'].split(subunits_delimiter):
+                gene_names.add(s.strip())
+    else:
+        for n in nodes:
+            gene_names.add(n['name'])
+    return gene_names
+ 
+def get_genes_from_db(DB: str, type: Literal['LR', 'TF_TG', 'RTF'], split_complexes: bool = False, subunits_delimiter: str = ',') -> set:
+    """
+    Column layout per DB type:
+    - LR:    'ligand', 'receptor'  (may contain complex subunits)
+    - TF_TG: 'source' (TF), 'target' (gene)
+    - RTF:   'receptor', 'tf'
+    """
+    db = pd.read_csv(f'ref_db/{DB}.csv')
+    if type == 'LR':
+        if split_complexes:
+            genes: set = set()
+            for _, row in db.iterrows():
+                for col in ['ligand', 'receptor']:
+                    for s in str(row[col]).split(subunits_delimiter):
+                        genes.add(s.strip())
+            return genes
+        return set(db['ligand'].astype(str)).union(set(db['receptor'].astype(str)))
+    elif type == 'TF_TG':
+        return set(db['source'].astype(str)).union(set(db['target'].astype(str)))
+    else:  # RTF
+        return set(db['receptor'].astype(str)).union(set(db['tf'].astype(str)))
+ 
+def prepare_gene_universe(
+    LR_DB: str,
+    TF_DB: str,
+    RTF_DB: str,
+    use_lr: bool = True,
+    use_tf: bool = True,
+    use_rtf: bool = True,
+    split_complexes: bool = False,
+    subunits_delimiter: str = ','
+) -> set:
+    universe: set = set()
+    if use_lr:
+        universe.update(get_genes_from_db(LR_DB, 'LR', split_complexes, subunits_delimiter))
+    if use_tf:
+        universe.update(get_genes_from_db(TF_DB, 'TF_TG'))
+    if use_rtf:
+        universe.update(get_genes_from_db(RTF_DB, 'RTF'))
+    return universe
+ 
+def universe_sanity_check(universe: set, genes_in_network: set) -> dict:
+    """
+    Returns a warning dict if some query genes are absent from the universe,
+    but does NOT raise — the caller decides whether to treat this as an error.
+    """
+    missing = genes_in_network - universe
+    if missing:
+        return {
+            'status': 'warning',
+            'missing_count': len(missing),
+            'examples': sorted(missing)[:10],
+            'message': (
+                f"{len(missing)} network gene(s) are absent from the universe "
+                f"(e.g. {', '.join(sorted(missing)[:5])}). "
+                "They will be ignored by gProfiler."
+            )
+        }
+    return {'status': 'ok', 'missing_count': 0, 'examples': [], 'message': ''}
+ 
+def run_gprofiler(
+    gene_list: list,
+    organism: str,
+    sources: list,
+    background: Optional[list],
+    significance_method: str,
+    user_threshold: float,
+) -> List[dict]:
+    """ wrapper for gprofiler-official."""
+    gp = GProfiler(return_dataframe=False)
+    kwargs: dict = dict(
+        query=gene_list,
+        organism=organism,
+        sources=sources,
+        significance_threshold_method=significance_method,
+        user_threshold=user_threshold,
+        no_evidences=False, #this parameter allows to report which genes of query where found in the term
+    )
+    if background:
+        kwargs["background"] = background
+    return gp.profile(**kwargs)  # type: ignore[return-value]
+ 
+def format_results(raw: List[dict]) -> List[dict]:
+    """Trim & rename fields for the frontend."""
+    keep = [
+        "source", "native", "name", "p_value",
+        "significant", "description",
+        "term_size", "query_size", "intersection_size",
+        "precision", "recall",
+        "intersections",
+    ]
+    out = []
+    for r in raw:
+        row = {k: r.get(k) for k in keep}
+        row["gene_ratio"] = (
+            round(r["intersection_size"] / r["query_size"], 4)
+            if r.get("query_size") else None
+        )
+        out.append(row)
+    return out
+ 
+@app.get('/api/go_enrichment')
+def perform_go_enrichment(
+    # network filtering
+    comparison: str = None,
+    sender: str = None,
+    receiver: str = None,
+    reverse_sig: bool = False,
+    filter_intrascore: bool = False,
+    filter_pv: bool = False,
+    filter_inter: bool = False,
+    min_intrascore: float = 0.5,
+    max_intrascore: float = 1.0,
+    pv_thresh: float = 0.05,
+    focus_on_LR: bool = False,
+    inter_dir: Literal['up', 'down'] = 'up',
+    # gene universe 
+    split_complexes: bool = False,
+    subunits_delimiter: str = ',',
+    LR_DB: Literal[
+        'LR_pairs_Lagger_2023_mouse',
+        'LR_pairs_Lagger_2023_human',
+        'LR_pairs_ConnectomeDB_2020',
+        'LR_pairs_Skelly_2018_mouse'
+    ] = 'LR_pairs_Lagger_2023_mouse',
+    TF_DB: Literal[
+        'collecTRI_mouse',
+        'collecTRI_human',
+        'TF_TG_TTRUSTv2_mouse',
+        'TF_TG_TTRUSTv2_human'
+    ] = 'collecTRI_mouse',
+    RTF_DB: Literal[
+        'TF_PPR_KEGG_human',
+        'TF_PPR_KEGG_mouse'
+    ] = 'TF_PPR_KEGG_mouse',
+    use_lr: bool = True,
+    use_tf: bool = True,
+    use_rtf: bool = True,
+    use_custom_universe: bool = False,
+    custom_universe: List[str] = Query(default=[]),
+    # gProfiler params 
+    significance_method: Literal['g_SCS', 'bonferroni', 'fdr'] = 'g_SCS',
+    pv_cutoff: float = 0.05,
+    # repeated query-param: ?sources=GO:BP&sources=KEGG  OR comma-joined ?sources=GO:BP,KEGG
+    sources: List[str] = Query(default=['GO:BP', 'GO:MF', 'GO:CC']),
+    organism: Literal['hsapiens', 'mmusculus'] = 'mmusculus',
+):
+    gene_set: set = get_genes_set(
+        comparison, sender, receiver, reverse_sig, filter_intrascore, filter_pv, filter_inter,
+        min_intrascore, max_intrascore, pv_thresh, focus_on_LR, inter_dir,
+        split_complexes, subunits_delimiter
+    )
+    if not gene_set:
+        raise HTTPException(
+            status_code=400,
+            detail="No genes found in the filtered network. Please adjust your filters."
+        )
+ 
+    if use_custom_universe:
+        if not custom_universe:
+            raise HTTPException(
+                status_code=400,
+                detail="use_custom_universe=true but no genes were provided via custom_universe."
+            )
+        background_set: set = set()
+        for entry in custom_universe:
+            for g in entry.split(','):
+                g = g.strip()
+                if g:
+                    background_set.add(g)
+    else:
+        try:
+            background_set = prepare_gene_universe(
+                LR_DB, TF_DB, RTF_DB, use_lr, use_tf, use_rtf,
+                split_complexes, subunits_delimiter
+            )
+        except FileNotFoundError as e:
+            raise HTTPException(status_code=500, detail=f"Reference DB file not found: {e}")
+ 
+    sanity = universe_sanity_check(background_set, gene_set)
+    # do NOT block on warnings — gProfiler can still run; missing genes are
+    # simply not enriched. Only raise if the universe itself is empty.
+    if not background_set:
+        raise HTTPException(status_code=400, detail="Gene universe is empty.")
+ 
+    # Flatten sources (frontend may send comma-joined or repeated params)
+    source_list: list = []
+    for entry in sources:
+        for s in entry.split(','):
+            s = s.strip()
+            if s:
+                source_list.append(s)
+    if not source_list:
+        raise HTTPException(status_code=400, detail="No annotation sources selected.")
+ 
+    try:
+        raw = run_gprofiler(
+            gene_list=sorted(gene_set),
+            organism=organism,
+            sources=source_list,
+            background=sorted(background_set),   # must be a list, not a set
+            significance_method=significance_method,
+            user_threshold=pv_cutoff,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"gProfiler error: {e}")
+ 
+    res = format_results(raw)
+    # print(res)
+    return JSONResponse({
+        "query_size": len(gene_set),
+        "background_size": len(background_set),
+        "n_significant": sum(1 for r in res if r["significant"]),
+        "universe_warning": sanity['message'] if sanity['status'] == 'warning' else None,
+        "results": res,
+    })

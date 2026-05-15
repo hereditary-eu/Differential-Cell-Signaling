@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
-	import { sender, receiver } from '$lib/stores';
+	import { sender, receiver, reverseSig } from '$lib/stores';
 
 	type LRDatum = { sender: string; receiver: string; count: number };
-
+	let lrCells: d3.Selection<SVGRectElement, LRDatum, SVGGElement, unknown> | undefined;
 	export let fullNet: {
 		nodes: any[];
 		links: any[];
@@ -78,7 +78,7 @@
 		const g = svg.append('g').attr('transform', `translate(${gx},${gy})`);
 
 		// cells
-		g.selectAll<SVGRectElement, LRDatum>('rect.cell')
+		lrCells = g.selectAll<SVGRectElement, LRDatum>('rect.cell')
 			.data(lrdata)
 			.join('rect')
 			.attr('class', 'cell')
@@ -98,7 +98,16 @@
 				sender.set(d.sender);
 				receiver.set(d.receiver);
 			});
-
+		// $: if ($sender && $receiver && $reverseSig) {
+		// 	g.selectAll<SVGRectElement, LRDatum>('rect.cell')
+		// 		.data(lrdata)
+		// 		.join('rect')				
+		// 		// highlight selected sender-receiver pair with a border, also the mirror if reverseSig is on
+		// 		.attr('stroke', (d) => reverseSig ? 
+		// 			((d.sender === $sender && d.receiver === $receiver) || (d.sender === $receiver && d.receiver === $sender) ? '#000000' : 'none')
+		// 			:
+		// 			(d.sender === $sender && d.receiver === $receiver ? '#000000' : 'none'));
+		// };
 		// cell value labels
 		const fontSize = Math.max(6, Math.min(10, x.bandwidth() / 3));
 		const maxCount = d3.max(lrdata, (d) => d.count) ?? 1;
@@ -303,7 +312,33 @@
 	}
 
 	$: if (fullNet?.celltypes?.length) drawAll();
-
+	$: if (lrCells) {	
+		lrCells
+			.attr('stroke', (d) =>
+				$reverseSig
+					? (
+							(d.sender === $sender && d.receiver === $receiver) ||
+							(d.sender === $receiver && d.receiver === $sender)
+						)
+						? '#000000'
+						: 'none'
+					: d.sender === $sender && d.receiver === $receiver
+						? '#000000'
+						: 'none'
+			)
+			.attr('stroke-width', (d) =>
+				$reverseSig
+					? (
+							(d.sender === $sender && d.receiver === $receiver) ||
+							(d.sender === $receiver && d.receiver === $sender)
+						)
+						? 1.5
+						: 0
+					: d.sender === $sender && d.receiver === $receiver
+						? 1.5
+						: 0
+			);
+	}
 	onMount(() => {
 		resizeObserver = new ResizeObserver((entries) => {
 			for (const entry of entries) {

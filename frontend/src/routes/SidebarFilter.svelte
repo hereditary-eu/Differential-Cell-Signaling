@@ -25,6 +25,7 @@
 	let maxIntrascore = $state(1.0);
 	let interDir = $state('up');
 	let focusOnLR = $state(true);
+	let filterTFs = $state(false);
 
 	let isResetting = false;
 
@@ -46,7 +47,8 @@
 			minIntrascore,
 			maxIntrascore,
 			interDir,
-			focusOnLR
+			focusOnLR,
+			filterTFs
 		];
 
 		if (!isResetting) {
@@ -67,6 +69,7 @@
 		maxIntrascore = 1.0;
 		interDir = 'up';
 		focusOnLR = true;
+		filterTFs = false;
 
 		setTimeout(() => {
 			isResetting = false;
@@ -87,7 +90,8 @@
 			max_intrascore: maxIntrascore.toString(),
 			pv_thresh: pvThresh.toString(),
 			inter_dir: interDir,
-			focus_on_LR: focusOnLR.toString()
+			focus_on_LR: focusOnLR.toString(),
+			filterTFs: filterTFs.toString()
 		});
 		filteringQueryStr.set(`${query.toString()}`);
 		console.log('FILTERING QUERY TO STR');
@@ -209,5 +213,9 @@
 	<div class="flex items-center gap-2">
 		<input id="focus-LR" type="checkbox" bind:checked={focusOnLR} defaultChecked />
 		<label for="focus-LR">Focus on LR interactions</label>
+	</div>
+	<div class="flex items-center gap-2">
+		<input id="filterTFs" type="checkbox" bind:checked={filterTFs} />
+		<label for="filterTFs">Filter TFs</label>
 	</div>
 </div>

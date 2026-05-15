@@ -1,6 +1,6 @@
 <script lang="ts">
 	export let getSvgEl: () => SVGSVGElement | null;
-	export let getLegendEl: () => HTMLElement | null;
+	// export let getLegendEl: () => HTMLElement | null;
 	export let filename: string = 'diffCellSig';
 
 	let exporting = false;
@@ -30,7 +30,8 @@
 			cloneDefs.innerHTML += globalDefs.innerHTML;
 		}
 		// Embed legend as a foreignObject
-		const legendEl = getLegendEl();
+		// const legendEl = getLegendEl();
+		const legendEl = document.getElementById('network-legend');
 		if (legendEl) {
 			const legendRect = legendEl.getBoundingClientRect();
 			const svgRect = svgEl.getBoundingClientRect();

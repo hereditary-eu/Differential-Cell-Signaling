@@ -2,9 +2,9 @@
 import * as d3 from 'd3';
 
 const NODE_SIZES = {
-	TF: { base: 7, highlight: 12 },
-	ligand: { base: 90, highlight: 200 },
-	receptor: { base: 12, highlight: 18 }
+	TF: { base: 7, highlight: 10 },
+	ligand: { base: 90, highlight: 180 },
+	receptor: { base: 12, highlight: 16 }
 };
 
 export function drawNode(
@@ -51,52 +51,72 @@ export function aesEdge(
     }    
 }
 
-export function updateNodeColors(nodeSelection: d3.Selection<any, any, any, any>, colorScale: d3.ScaleOrdinal<string, string, string>, aesSettings: any) {
+export function updateNodeColors(
+    nodeSelection: d3.Selection<any, any, any, any>, 
+    colorScale: d3.ScaleOrdinal<string, string, string>, 
+    aesSettings: any) {
 		if (!nodeSelection) return;
 		nodeSelection.each(function (this: any, d: any) {
 			const g = d3.select(this as Element);
 			const fill = aesSettings.CT ? colorScale(d.celltype) : '#a9a9a9';
-			g.select('circle, path, rect').attr('fill', fill);
+			g.select('circle').attr('fill', fill);
+            g.select('path').attr('fill', fill);
+            g.select('rect').attr('fill', fill);
 		});
 	}
 export function updateEdgesAes(linkSelection: d3.Selection<any, any, any, any>, aesSettings: any) {
 		if (!linkSelection) return;
 		linkSelection.call((sel: any) => aesEdge(sel, aesSettings.LR, aesSettings.TF));
 	}
+export function addNodesLabel(nodeSelection: d3.Selection<any, any, any, any>, fontSize: number = 9, nodeSize = NODE_SIZES) {
+    if (!nodeSelection) return;
+    nodeSelection
+		.append('text')
+            .attr('class', 'cycle-label')
+            .attr('text-anchor', 'middle')
+            .attr('font-size', fontSize)
+            .attr('font-weight', '300')
+            .attr('color', '#000000')
+            .attr('fill', '#000000')
+            .attr('stroke', '#000000')
+            .attr('dy', (d: any) => {
+                return d.moltype === 'TF'
+                    ? nodeSize.TF.base + 10
+                    : d.moltype === 'receptor'
+                        ? nodeSize.receptor.base / 2 + 10
+                        : 13; // triangle/ligand
+            })
+            .text((d: any) => d.name);
+
+}
 // export function to be called when a node is CLICKED (it's not related to sidebarSearch)
-export function highlightNode(selectedId: string, links: any, node: d3.Selection<any, any, any, any>, link: d3.Selection<any, any, any, any>) {
-        const adjacency: Record<string, Set<string>> = {};
-        links.forEach((l: any) => {
-            const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
-            const targetId = typeof l.target === 'object' ? l.target.id : l.target;
-            adjacency[sourceId] = adjacency[sourceId] || new Set<string>();
-            adjacency[targetId] = adjacency[targetId] || new Set<string>();
-            adjacency[sourceId].add(targetId);
-            adjacency[targetId].add(sourceId);
-        });
-        function getNeighbors(id: string) {
-            return adjacency[id] || new Set<string>();
-        }
-        const neighbors = getNeighbors(selectedId);
-
-        node.attr('opacity', (d: any) => (d.id === selectedId || neighbors.has(d.id) ? 1 : 0.3));
-        link.attr('opacity', (l: any) =>
-            l.source.id === selectedId || l.target.id === selectedId ? 1 : 0.1
-        );
+export function highlightNode(selectedId: string | null, links: any, node: d3.Selection<any, any, any, any>, link: d3.Selection<any, any, any, any>) {
+    if (!selectedId) {
+		node.attr('opacity', 1);
+		link.attr('opacity', 1);
+		return;
+	}
+    
+    const adjacency: Record<string, Set<string>> = {};
+    links.forEach((l: any) => {
+        const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+        const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+        adjacency[sourceId] = adjacency[sourceId] || new Set<string>();
+        adjacency[targetId] = adjacency[targetId] || new Set<string>();
+        adjacency[sourceId].add(targetId);
+        adjacency[targetId].add(sourceId);
+    });
+    function getNeighbors(id: string) {
+        return adjacency[id] || new Set<string>();
     }
+    const neighbors = getNeighbors(selectedId);
 
-// export function trimPath(source: { x: number; y: number }, target: { x: number; y: number }, r = 12) {
-// 			const dx = target.x - source.x;
-// 			const dy = target.y - source.y;
-// 			const dist = Math.sqrt(dx * dx + dy * dy);
+    node.attr('opacity', (d: any) => (d.id === selectedId || neighbors.has(d.id) ? 1 : 0.3));
+    link.attr('opacity', (l: any) =>
+        l.source.id === selectedId || l.target.id === selectedId ? 1 : 0.1
+    );
+}
 
-// 			const ratio = (dist - r) / dist;
-
-// 			return {
-// 				x: source.x + dx * ratio,
-// 				y: source.y + dy * ratio
-// 			};
-// 		}
 export function trimPath(
     source: { x: number; y: number },
     target: { x: number; y: number },
@@ -113,38 +133,8 @@ export function trimPath(
     };
 }
 
-export function defineMarkers(
-    svg: d3.Selection<SVGSVGElement, unknown, null, undefined>) {
-        const defs = svg.append('defs');
-		defs
-			.append('marker')
-			.attr('id', 'arrow')
-			.attr('viewBox', '0 -5 10 10')
-			.attr('refX', 9)
-			.attr('refY', 0)
-			.attr('markerWidth', 6)
-			.attr('markerHeight', 6)
-			.attr('orient', 'auto')
-			.append('path')
-			.attr('d', 'M0,-5L10,0L0,5')
-			.attr('fill', '#999');
-		defs
-			.append('marker')
-			.attr('id', 'Tblunt')
-			.attr('viewBox', '-2 -6 4 12')
-			.attr('refX', 1)
-			.attr('refY', 0)
-			.attr('markerWidth', 10)
-			.attr('markerHeight', 10)
-			.attr('orient', 'auto')
-			.append('path')
-			.attr('d', 'M0,-6L0,6')
-			.attr('stroke', '#999')
-			.attr('stroke-width', 2);
-    }
-
 export function resetNodesSize (nodeSelection: any, nodeSize = NODE_SIZES) {
-    nodeSelection.select('circle').attr('r', nodeSize.TF.base);
+    nodeSelection.selectAll('circle').attr('r', nodeSize.TF.base);
     nodeSelection.selectAll('rect')
             .attr('width', nodeSize.receptor.base)
             .attr('height', nodeSize.receptor.base)
@@ -231,7 +221,7 @@ export function deduplicateTFs(rawNodes: any[], rawLinks: any[]): { nodes: any[]
 		// For each group, keep one representative node; record all names
 		const mergedTFs: any[] = [];
 		// Map from old id to representative id
-		const idMap = new Map<number, number>();
+		const idMap = new Map<number | string, number | string>();
 		for (const [, members] of groups) {
 			const rep = { ...members[0] }; // representative node
 			rep._mergedNames = members.map((m) => m.name);
@@ -265,7 +255,8 @@ export function applyCycleHighlight(
     cycleData: { nodeIds: Set<string>; edgePairs: Set<string> } | null,
     nodeSelection: any,
     linkSelection: any,
-    //   colorScale: d3.ScaleOrdinal<string, string, string>,
+    colorScale: d3.ScaleOrdinal<string, string, string>,
+    aesSettings: any,
     nodeSize = NODE_SIZES,
     fontSize = 9
     ) {
@@ -281,82 +272,26 @@ export function applyCycleHighlight(
     }
 
     const { nodeIds, edgePairs } = cycleData;
-
     const normalizedIds = new Set([...nodeIds].map(String));
-
     nodeSelection.attr('opacity', (d: any) => (normalizedIds.has(String(d.id)) ? 1 : 0.12));
-
     linkSelection?.attr('opacity', (l: any) => {
         const srcId = String(typeof l.source === 'object' ? l.source.id : l.source);
         const tgtId = String(typeof l.target === 'object' ? l.target.id : l.target);
         return edgePairs.has(`${srcId}->${tgtId}`) || edgePairs.has(`${tgtId}->${srcId}`) ? 1 : 0.06;
     });
-    // aesEdge(linkSelection, 'volcano', 'endShape');
 
     nodeSelection.selectAll('.cycle-label').remove();
     nodeSelection.selectAll('.cycle-ring').remove();
 
-    nodeSelection.each(function (this: SVGGElement, d: any) {
-        const g = d3.select(this);
-        const inCycle = normalizedIds.has(String(d.id));
-
-        if (d.moltype === 'TF') {
-        g.select('circle').attr('r', inCycle ? nodeSize.TF.highlight : nodeSize.TF.base);
-        } else if (d.moltype === 'ligand') {
-        g.select('path').attr(
-            'd',
-            d3.symbol().type(d3.symbolTriangle).size(inCycle ? nodeSize.ligand.highlight : nodeSize.ligand.base)
-        );
-        } else if (d.moltype === 'receptor') {
-        const side = inCycle ? nodeSize.receptor.highlight : nodeSize.receptor.base;
-        g.select('rect')
-            .attr('width', side).attr('height', side)
-            .attr('x', -side / 2).attr('y', -side / 2);
-        }
-
-        if (!inCycle) return;
-
-        // const cellColor = colorScale(d.celltype);
-        if (d.moltype === 'TF') {
-        g.insert('circle', ':first-child')  // behind the fill circle
-            .attr('class', 'cycle-ring')
-            .attr('r', nodeSize.TF.highlight + 2.5)
-            .attr('fill', 'none')
-            // .attr('stroke', cellColor)
-            .attr('stroke-width', 2);
-        } else if (d.moltype === 'ligand') {
-        g.insert('path', ':first-child')
-            .attr('class', 'cycle-ring')
-            .attr('d', d3.symbol().type(d3.symbolTriangle).size(nodeSize.ligand.highlight + 40))
-            .attr('fill', 'none')
-            // .attr('stroke', cellColor)
-            .attr('stroke-width', 2);
-        } else if (d.moltype === 'receptor') {
-        const side = nodeSize.receptor.highlight + 5;
-        g.insert('rect', ':first-child')
-            .attr('class', 'cycle-ring')
-            .attr('width', side).attr('height', side)
-            .attr('x', -side / 2).attr('y', -side / 2)
-            .attr('fill', 'none')
-            // .attr('stroke', cellColor)
-            .attr('stroke-width', 2);
-        }
-
-        const labelOffset = d.moltype === 'TF'
-        ? nodeSize.TF.highlight + 5
-        : d.moltype === 'receptor'
-            ? nodeSize.receptor.highlight / 2 + 7
-            : 13; // ligand triangle: roughly half height
-
-        g.append('text')
-        .attr('class', 'cycle-label')
-        .attr('text-anchor', 'middle')
-        .attr('dy', labelOffset)
-        .attr('font-size', fontSize)
-        .attr('font-weight', '600')
-        .attr('stroke', 'var(--color-surface, #fff)')
-        .attr('stroke-width', '1px')
-        .attr('paint-order', 'stroke')   // stroke renders behind fill 
-        .text(d.name);
-    });
+    updateNodeColors(nodeSelection, colorScale, aesSettings);
+    updateEdgesAes(linkSelection, aesSettings);
+    linkSelection?.attr('opacity', (l: any) => {
+		const srcId = String(typeof l.source === 'object' ? l.source.id : l.source);
+		const tgtId = String(typeof l.target === 'object' ? l.target.id : l.target);
+		return edgePairs.has(`${srcId}->${tgtId}`) || edgePairs.has(`${tgtId}->${srcId}`) ? 1 : 0.06;
+	});
+    const cycleNodeSelection = nodeSelection.filter((d: any) =>
+		normalizedIds.has(String(d.id))
+	);
+    addNodesLabel(cycleNodeSelection, fontSize, nodeSize);
 }

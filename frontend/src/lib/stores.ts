@@ -1,6 +1,6 @@
 import { scaleOrdinal, schemeTableau10 } from "d3";
 import { writable, derived } from "svelte/store"; 
-import type { NeighborhoodData} from "./types";
+import type { NeighborhoodData, GoResults} from "./types";
 export const sender = writable('');
 export const receiver = writable(''); 
 export const reverseSig = writable(false);
@@ -38,3 +38,4 @@ export const highlightedCycle = writable<{
   nodeIds: Set<string>;
   edgePairs: Set<string>; // "sourceId->targetId" for fast lookup
 } | null>(null);
+export const goResults = writable(<GoResults | null>null);

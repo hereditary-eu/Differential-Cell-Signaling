@@ -17,6 +17,7 @@
 	let svgContainer: SVGSVGElement;
 	let containerDiv: HTMLDivElement;
 	let simulation: d3.Simulation<any, undefined>;
+
 	let nodeSelection: any = null;
 	let linkSelection: any = null;
 
@@ -60,8 +61,14 @@
 	}
 
 	$: applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
-	$: applyCycleHighlight($highlightedCycle, nodeSelection, linkSelection);
+	$: applyCycleHighlight($highlightedCycle, nodeSelection, linkSelection, $colorScale, $aesSettings);
 
+		const bundleLine = d3
+		.line<[number, number]>()
+		.x((p) => p[0])
+		.y((p) => p[1])
+		.curve(d3.curveBundle.beta(0.88)); // beta is how aggressively edges bundle
+		
 	function renderNetwork() {
 		if (!svgContainer || !containerDiv) return;
 		if (!networkData?.nodes?.length) return;
@@ -155,8 +162,9 @@
 
 		svg.on('click', (event) => {
 			if (event.target === svg.node()) {
-				node.attr('opacity', 1);
-				link.attr('opacity', 1);
+				// selectedNode.set('');
+				// selectedNodeName.set('');
+				highlightNode(null, simLinks, node, link);
 				resetNodesSize(nodeSelection);
 			}
 		});

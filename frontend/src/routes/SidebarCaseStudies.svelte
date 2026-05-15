@@ -130,8 +130,7 @@
 	.tooltip {
 		position: absolute;
 		left: 100%;
-		top: 50%;
-		transform: translateY(-50%);
+		top: 100%;
 		transform: translateX(-96%);
 		margin-left: 0px;
 		width: max-content;

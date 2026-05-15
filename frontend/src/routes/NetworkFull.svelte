@@ -7,7 +7,7 @@
 	let svgEl: SVGSVGElement;
 	let simulation: d3.Simulation<any, undefined>;
 	let labelSimulation: d3.Simulation<any, undefined>;
-	let metric: 'betweenness' | 'pagerank' = 'betweenness';
+	let metric: 'betweenness' | 'pagerank' = 'pagerank';
 	let resizeObserver: ResizeObserver;
 
 	let svgW = 900;
@@ -300,7 +300,7 @@
 		labelSimulation = d3
 			.forceSimulation(labelData as any)
 			.alphaDecay(0.02)
-			.velocityDecay(0.4)
+			.velocityDecay(0.3)
 			.force('anchor', () => {
 				for (const d of labelData as any[]) {
 					const nx = d.nodeRef.x ?? 0;
@@ -371,19 +371,19 @@
 	<span style="font-size: 12px; color: #666; margin-left: 4px;">Metric:</span>
 	<button
 		style="font-size: 12px; padding: 2px 10px; border-radius: 4px; border: 1px solid #bbb;
-			background: {metric === 'betweenness' ? '#e03333' : 'transparent'};
-			color: {metric === 'betweenness' ? '#fff' : 'inherit'}; cursor: pointer;"
-		onclick={() => switchMetric('betweenness')}
-	>
-		Betweenness
-	</button>
-	<button
-		style="font-size: 12px; padding: 2px 10px; border-radius: 4px; border: 1px solid #bbb;
 			background: {metric === 'pagerank' ? '#e03333' : 'transparent'};
 			color: {metric === 'pagerank' ? '#fff' : 'inherit'}; cursor: pointer;"
 		onclick={() => switchMetric('pagerank')}
 	>
 		PageRank
+	</button>
+	<button
+		style="font-size: 12px; padding: 2px 10px; border-radius: 4px; border: 1px solid #bbb;
+			background: {metric === 'betweenness' ? '#e03333' : 'transparent'};
+			color: {metric === 'betweenness' ? '#fff' : 'inherit'}; cursor: pointer;"
+		onclick={() => switchMetric('betweenness')}
+	>
+		Betweenness
 	</button>
 </div>
 
