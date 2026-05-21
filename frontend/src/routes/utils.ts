@@ -2,9 +2,9 @@
 import * as d3 from 'd3';
 
 const NODE_SIZES = {
-	TF: { base: 7, highlight: 10 },
-	ligand: { base: 90, highlight: 180 },
-	receptor: { base: 12, highlight: 16 }
+	TF: { base: 6, highlight: 10 },
+	ligand: { base: 70, highlight: 180 },
+	receptor: { base: 10, highlight: 16 }
 };
 
 export function drawNode(
@@ -72,7 +72,7 @@ export function addNodesLabel(nodeSelection: d3.Selection<any, any, any, any>, f
     if (!nodeSelection) return;
     nodeSelection
 		.append('text')
-            .attr('class', 'cycle-label')
+            .attr('class', 'node-label')
             .attr('text-anchor', 'middle')
             .attr('font-size', fontSize)
             .attr('font-weight', '300')
@@ -115,6 +115,9 @@ export function highlightNode(selectedId: string | null, links: any, node: d3.Se
     link.attr('opacity', (l: any) =>
         l.source.id === selectedId || l.target.id === selectedId ? 1 : 0.1
     );
+
+    // add label to the selected node
+    addNodesLabel(node.filter((d: any) => d.id === selectedId));
 }
 
 export function trimPath(
@@ -142,6 +145,8 @@ export function resetNodesSize (nodeSelection: any, nodeSize = NODE_SIZES) {
             .attr('y', -nodeSize.receptor.base/2);
     nodeSelection.selectAll('path')
         .attr('d', d3.symbol().type(d3.symbolTriangle).size(nodeSize.ligand.base));
+    // remove labels if any
+    nodeSelection.selectAll('.node-label').remove();
     return;
 }
 //this is the highlight called when node is searched by SidebarSearch
@@ -173,7 +178,7 @@ export function applyHighlightSearch(
 		}
 		nodeSelection.attr('opacity', (d: any) => (matchIds.has(d.id) ? 1 : 0.15));
 		linkSelection?.attr('opacity', 0.15);
-
+        addNodesLabel(nodeSelection.filter((d: any) => matchIds.has(d.id)), 11, nodeSize);
 		nodeSelection.each(function (this: SVGGElement, d: any) {
             const g = d3.select(this);
             const isMatch = matchIds.has(d.id);
@@ -266,7 +271,7 @@ export function applyCycleHighlight(
         nodeSelection.attr('opacity', 1);
         linkSelection?.attr('opacity', 1);
         resetNodesSize(nodeSelection, nodeSize);
-        nodeSelection.selectAll('.cycle-label').remove(); 
+        nodeSelection.selectAll('.node-label').remove(); 
         nodeSelection.selectAll('.cycle-ring').remove();
         return;
     }
@@ -280,7 +285,7 @@ export function applyCycleHighlight(
         return edgePairs.has(`${srcId}->${tgtId}`) || edgePairs.has(`${tgtId}->${srcId}`) ? 1 : 0.06;
     });
 
-    nodeSelection.selectAll('.cycle-label').remove();
+    nodeSelection.selectAll('.node-label').remove();
     nodeSelection.selectAll('.cycle-ring').remove();
 
     updateNodeColors(nodeSelection, colorScale, aesSettings);

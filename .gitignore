@@ -2,6 +2,10 @@
 *.log
 *.pid
 
+#students data
+backend/students_data.tsv
+backend/temporary.py
+
 #postrgesql + puppygraph
 data/pg-data/
 data/pgpass/

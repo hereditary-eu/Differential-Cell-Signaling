@@ -94,13 +94,13 @@
 		.x((p) => p[0])
 		.y((p) => p[1])
 		.curve(d3.curveBundle.beta(0.88)); // beta is how aggressively edges bundle
-		
+
 	function bundledPath(d: any): string {
 		const src = d.source;
 		const end =
 			d.type === 'TFL' && $aesSettings.TF === 'endShape'
-			? trimPath(src, d.target, 10)
-			: { x: d.target.x, y: d.target.y };
+				? trimPath(src, d.target, 10)
+				: { x: d.target.x, y: d.target.y };
 
 		const tgt = { x: end.x, y: end.y };
 		const srcRi = ringIndexOf(src);
@@ -114,19 +114,19 @@
 		const rMid = (ringRadii[srcRi] + ringRadii[tgtRi]) / 2;
 		// control point 1: at source angle, mid radius
 		const cp1 = {
-		x: cx() + rMid * Math.cos(srcAngle),
-		y: cy() + rMid * Math.sin(srcAngle),
+			x: cx() + rMid * Math.cos(srcAngle),
+			y: cy() + rMid * Math.sin(srcAngle)
 		};
 		// control point 2: at target angle, mid radius
 		const cp2 = {
-		x: cx() + rMid * Math.cos(tgtAngle),
-		y: cy() + rMid * Math.sin(tgtAngle),
+			x: cx() + rMid * Math.cos(tgtAngle),
+			y: cy() + rMid * Math.sin(tgtAngle)
 		};
 		points = [
-		[src.x, src.y],
-		[cp1.x, cp1.y],
-		[cp2.x, cp2.y],
-		[tgt.x, tgt.y],
+			[src.x, src.y],
+			[cp1.x, cp1.y],
+			[cp2.x, cp2.y],
+			[tgt.x, tgt.y]
 		];
 		return bundleLine(points) ?? '';
 	}
@@ -139,11 +139,11 @@
 
 	$: {
 		const groupChanged = $aesSettings.groupNodes !== prevGroupNodes;
-		const dataChanged  = networkData !== prevNetworkData;
+		const dataChanged = networkData !== prevNetworkData;
 
 		if (groupChanged || dataChanged) {
-			prevGroupNodes   = $aesSettings.groupNodes;
-			prevNetworkData  = networkData;
+			prevGroupNodes = $aesSettings.groupNodes;
+			prevNetworkData = networkData;
 			// also sync style trackers so their $: blocks don't fire after render
 			prevCT = $aesSettings.CT;
 			prevLR = $aesSettings.LR;
@@ -171,21 +171,28 @@
 	}
 
 	$: applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
-	$: applyCycleHighlight($highlightedCycle, nodeSelection, linkSelection, $colorScale, $aesSettings);
+	// $: highlightNode($highlightedNode, simLinks, nodeSelection, linkSelection);
+	$: applyCycleHighlight(
+		$highlightedCycle,
+		nodeSelection,
+		linkSelection,
+		$colorScale,
+		$aesSettings
+	);
 
 	const renderNetwork = () => {
 		if (!svgContainer || !containerDiv) return;
 		if (!networkData?.nodes?.length) return;
 		simulation?.stop();
-		
+
 		_W = containerDiv.clientWidth || 600;
- 		_H = containerDiv.clientHeight || 500;
-		
+		_H = containerDiv.clientHeight || 500;
+
 		const n = $sender === $receiver ? 3 : ringCount();
-		
+
 		if (ringRadii.length !== n) {
 			const minDim = Math.min(_W, _H);
-			const step = (minDim * 0.48) / n;           // outermost ring ≈ 48% of shortest side
+			const step = (minDim * 0.48) / n; // outermost ring ≈ 48% of shortest side
 			ringRadii = Array.from({ length: n }, (_, i) => minDim * 0.08 + i * step);
 			ringRotations = new Array(n).fill(0);
 			nodeBaseAngle.clear();
@@ -195,7 +202,7 @@
 		const safeLinks = networkData.links.map((l) => ({
 			...l,
 			source: typeof l.source === 'object' ? l.source.id : l.source,
-			target: typeof l.target === 'object' ? l.target.id : l.target,
+			target: typeof l.target === 'object' ? l.target.id : l.target
 		}));
 
 		const { nodes: rawNodes, links: rawLinks } = $aesSettings.groupNodes
@@ -217,27 +224,26 @@
 				projectNode(d);
 			}
 		});
-		
+
 		const nodeById = new Map(nodes.map((n) => [n.id, n]));
 		const simLinks = links.map((l: any) => ({
 			...l,
 			source: nodeById.get(typeof l.source === 'object' ? l.source.id : l.source) ?? l.source,
-			target: nodeById.get(typeof l.target === 'object' ? l.target.id : l.target) ?? l.target,
+			target: nodeById.get(typeof l.target === 'object' ? l.target.id : l.target) ?? l.target
 		}));
 
 		const svg = d3.select(svgContainer);
 		d3.select(svgContainer).selectAll('g').remove();
 		d3.select(svgContainer).selectAll('path').remove();
 
-		svg
-			.attr('viewBox', [0, 0, _W, _H])
-			.style('background', 'transparent')
-			.style('cursor', 'grab');
+		svg.attr('viewBox', [0, 0, _W, _H]).style('background', 'transparent').style('cursor', 'grab');
 
 		const zoomLayer = svg.append('g');
-		const zoom = d3.zoom<SVGSVGElement, unknown>().on('zoom', (event) => {zoomLayer.attr('transform', event.transform)});
+		const zoom = d3.zoom<SVGSVGElement, unknown>().on('zoom', (event) => {
+			zoomLayer.attr('transform', event.transform);
+		});
 		svg.call(zoom as any);
-		svg.call(zoom.transform, d3.zoomIdentity.translate( _W / 7, _H / 8).scale(0.9))
+		svg.call(zoom.transform, d3.zoomIdentity.translate(_W / 7, _H / 8).scale(0.9));
 
 		const circleGroup = zoomLayer.append('g').attr('class', 'guide-circles');
 		function syncCircles() {
@@ -257,13 +263,18 @@
 
 		simulation = d3
 			.forceSimulation(nodes)
-			.force('link', d3
+			.force(
+				'link',
+				d3
 					.forceLink(simLinks)
 					.id((d: any) => d.id)
 					.strength(0.1)
 			)
 			.force('charge', d3.forceManyBody().strength(-23))
-			.force('collide', d3.forceCollide((d: any) => 10))
+			.force(
+				'collide',
+				d3.forceCollide((d: any) => 10)
+			)
 			.force('center', d3.forceCenter(cx(), cy()));
 
 		const link = zoomLayer
@@ -275,8 +286,7 @@
 			.join('path')
 			.attr('stroke-opacity', (d: any) => (d.type === 'LR' ? 0.9 : 0.6))
 			.attr('mix-blend-mode', 'multiply') // for edges overlaps
-			.call((selection) => aesEdge(selection, $aesSettings.LR,$aesSettings.TF));
-
+			.call((selection) => aesEdge(selection, $aesSettings.LR, $aesSettings.TF));
 
 		const node = zoomLayer
 			.append('g')
@@ -284,9 +294,9 @@
 			.selectAll('g')
 			.data(nodes)
 			.join('g')
-			.attr('stroke', (d: any) => ( ($aesSettings.groupNodes && d._mergedCount > 1) ? '#000' : '#fff') )
+			.attr('stroke', (d: any) => ($aesSettings.groupNodes && d._mergedCount > 1 ? '#000' : '#fff'))
 			.call((sel) => drawNode(sel, $colorScale, $aesSettings.CT))
-			.on('click', (event: any, d: { id: string; name: string, _mergedCount: number }) => {
+			.on('click', (event: any, d: { id: string; name: string; _mergedCount: number }) => {
 				if (d._mergedCount > 1) return;
 				selectedNode.set(d.id);
 				selectedNodeName.set(d.name);
@@ -305,9 +315,10 @@
 			if (d._mergedNames?.length > 1) {
 				return `Merged TFs (${d._mergedCount}):\n${d._mergedNames.join('\n')}\n(${d.celltype})`;
 			}
-			return `${d.name}\n(${d.celltype})\n${d.moltype}\nB.: ${d.betweenness.toFixed(4)}\nP.: ${d.pagerank.toFixed(4)}`;
+			return `${d.name}\n(${d.celltype})\n${d.moltype}\nB.: ${d.betweenness?.toFixed(4)}\nP.: ${d.pagerank?.toFixed(4)}`;
 		});
-		link.append('title')
+		link
+			.append('title')
 			.text((d: any) =>
 				d.type === 'LR'
 					? `LR (${d.source.name} → ${d.target.name}) weight: ${d.weight.toFixed(4)} significance: ${d.significance.toFixed(4)}`
@@ -472,18 +483,24 @@
 		nodeSelection = node;
 		linkSelection = link;
 
-		applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
+		// applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
+		highlightNode($highlightedNode, simLinks, nodeSelection, linkSelection);
 	};
 
-	onMount(() => { requestAnimationFrame(() => renderNetwork()); });
-	onDestroy(() => { simulation?.stop(); });
+	onMount(() => {
+		requestAnimationFrame(() => renderNetwork());
+	});
+	onDestroy(() => {
+		simulation?.stop();
+	});
 
-	const getSvgEl = (): SVGSVGElement | null => svgContainer ?? null;
+	// const getSvgEl = (): SVGSVGElement | null => svgContainer ?? null;
 </script>
+
 <div style="position: relative; width: 100%; height: 100%;">
 	<DrawNetLegend />
 	<!-- <DownloadButton {getSvgEl} /> -->
 	<div bind:this={containerDiv} style="width: 100%; height: 100%;">
-	<svg bind:this={svgContainer} style="width: 100%; height: 100%; display: block;"></svg>
+		<svg bind:this={svgContainer} style="width: 100%; height: 100%; display: block;"></svg>
 	</div>
 </div>

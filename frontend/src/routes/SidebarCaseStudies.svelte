@@ -1,5 +1,3 @@
-<!-- component for choosing between FMD and ALS case studies or upload data -->
-
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { selectedCaseStudy, selectedComparison } from '$lib/stores';
@@ -30,6 +28,112 @@
 			selectedComparison.set('C9ALS_vs_PN');
 		}
 	}
+
+	// user defined case study
+	// let submitted = $state<{ success: Boolean, message: String }>({ success: false, message: '' });
+	// type Step = 'params' | 'files' | 'sanitize' | 'review';
+	// interface UploadState {
+	// 	caseStudyName: string;
+	// 	organism: 'human' | 'mouse';
+	// 	condition: string;
+	// 	refCondition: string;
+	// 	splitComplexes: boolean;
+	// 	cccFile: File | null;
+	// 	tflFile: File | null;
+	// 	sanitizeCelltypes: boolean;
+	// 	sanitizeReferenceFile: File | null;
+	// }
+	// interface ValidationErrors {
+	// 	caseStudyName?: string;
+	// 	condition?: string;
+	// 	refCondition?: string;
+	// 	cccFile?: string;
+	// 	tflFile?: string;
+	// }
+	// const steps: {id: Step; label: string; icon: string}[] = [
+	// 	{id: 'params', label: 'Parameters', icon: '⬡'},
+	// 	{id: 'files', label: 'Upload Files', icon: '⬢'},
+	// 	{id: 'sanitize', label: 'Sanitize Cell Types', icon: '⬡'},
+	// 	{id: 'review', label: 'Review & Submit', icon: '⬢'}
+	// ];
+	// const stepOrder: Step[] = ['params', 'files', 'sanitize', 'review'];
+	// let submitted = $state({ success: false, message: '' });
+	// let currentStep = $state<Step>('params');
+	// let isSubmitting = $state(false);
+	// let submitError = $state<string | null>(null);
+	// let submitSuccess = $state(false);
+	// let currentstate = $state({
+	// 	caseStudyName: '',
+	// 	organism: 'human' as const,
+	// 	condition: '',
+	// 	refCondition: '',
+	// 	splitComplexes: false,
+	// 	cccFile: null as File | null,
+	// 	tflFile: null as File | null,
+	// 	sanitizeCelltypes: false,
+	// 	sanitizeReferenceFile: null as File | null
+	// });
+	// let errors: ValidationErrors = {};
+	// let draggingFiles: 'ccc' | 'tf' | 'sanitize' | null = null;
+	// function validateParams(): boolean {
+	// 	errors = {};
+	// 	if (!currentstate.caseStudyName.trim()) errors.caseStudyName = 'Required';
+	// 	else if (!/^[a-zA-Z0-9_-]+$/.test(currentstate.caseStudyName))
+	// 	errors.caseStudyName = 'Only letters, numbers, _ and - allowed';
+	// 	if (!currentstate.condition.trim()) errors.condition = 'Required';
+	// 	if (!currentstate.refCondition.trim()) errors.refCondition = 'Required';
+	// 	if (currentstate.condition && currentstate.refCondition && currentstate.condition === currentstate.refCondition)
+	// 	errors.refCondition = 'Must differ from condition';
+	// 	return Object.keys(errors).length === 0;
+	// }
+	// function validateFiles(): boolean {
+	// 	errors = {};
+	// 	if (!currentstate.cccFile) errors.cccFile = 'CCC results file is required';
+	// 	if (!currentstate.tflFile)  errors.tflFile  = 'TF activity file is required';
+	// 	return Object.keys(errors).length === 0;
+	// }
+	// function validateCsv(file: File): Promise<string | null> {
+	// 	return new Promise((resolve) => {
+	// 	const reader = new FileReader();
+	// 	reader.onload = (e) => {
+	// 		const text = e.target?.result as string;
+	// 		const firstLine = text.split('\n')[0];
+	// 		if (!firstLine.includes(',') && !firstLine.includes('\t')) {
+	// 		resolve('File does not appear to be a valid CSV');
+	// 		} else {
+	// 		resolve(null);
+	// 		}
+	// 	};
+	// 	reader.onerror = () => resolve('Could not read file');
+	// 	reader.readAsText(file.slice(0, 2000));
+	// 	});
+	// }
+	// async function next() {
+	// 	if (currentStep === 'params') {
+	// 	if (!validateParams()) return;
+	// 	currentStep = 'files';
+	// 	} else if (currentStep === 'files') {
+	// 	if (!validateFiles()) return;
+	// 	currentStep = 'sanitize';
+	// 	} else if (currentStep === 'sanitize') {
+	// 	currentStep = 'review';
+	// 	}
+	// }
+	// function back() {
+	// 	const idx = stepOrder.indexOf(currentStep);
+	// 	if (idx > 0) currentStep = stepOrder[idx - 1];
+	// }
+	// function goToStep(step: Step) {
+	// 	const target = stepOrder.indexOf(step);
+	// 	const current = stepOrder.indexOf(currentStep);
+	// 	if (target < current) currentStep = step;
+	// }
+	// function handleFileInput(event: Event, field: 'cccFile' | 'tflFile' | 'sanitizeReferenceFile') {
+	// 	const input = event.target as HTMLInputElement;
+	// 	const file = input.files?.[0] || null;
+	// 	currentstate = { ...currentstate, [field]: file };
+	// 	if (field !== 'sanitizeReferenceFile') errors = { ...errors, [field]: undefined };
+	// }
 </script>
 
 <fieldset>
@@ -41,7 +145,7 @@
 			type="radio"
 			value="als"
 			checked={$selectedCaseStudy === 'ALS'}
-			on:change={() => handleCaseStudyChange('ALS')}
+			onchange={() => handleCaseStudyChange('ALS')}
 			class="form-check-input"
 			id="als"
 		/>
@@ -55,7 +159,7 @@
 			type="radio"
 			value="FMD"
 			checked={$selectedCaseStudy === 'FMD'}
-			on:change={() => handleCaseStudyChange('FMD')}
+			onchange={() => handleCaseStudyChange('FMD')}
 			class="form-check-input"
 			id="fmd"
 		/>
@@ -138,7 +242,7 @@
 		opacity: 0;
 		pointer-events: none;
 		transition: opacity 0.2s;
-		
+
 		background: #333;
 		color: white;
 		padding: 6px 10px;

@@ -1,5 +1,4 @@
-from fastapi import FastAPI, HTTPException
-from fastapi import Query
+from fastapi import FastAPI, HTTPException, Query, APIRouter, UploadFile, File, Form, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import psycopg2
@@ -10,10 +9,12 @@ import networkx as nx
 from collections import Counter, defaultdict, deque
 import pandas as pd
 from gprofiler import GProfiler
-
+import shutil
+from pathlib import Path
+router = APIRouter()
 app = FastAPI()
-origins = ['http://localhost:5173', 'http://127.0.0.1:5173'] #allow frontend to connect
-#ATTENTION: if backend is run as 127.0.0.1, CORS error arises! so use 0.0.0.0
+app.include_router(router, prefix='/api')
+origins = ['http://localhost:5173', 'http://127.0.0.1:5173'] #allow frontend to connect #ATTENTION: if backend is run as 127.0.0.1, CORS error arises! so use 0.0.0.0
 app.add_middleware(
     CORSMiddleware,
     # allow_origins=origins,
@@ -22,7 +23,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
-
 def get_db_connection():
     return psycopg2.connect(
         dbname='diffcellsig',
@@ -30,7 +30,7 @@ def get_db_connection():
         password='postgres',
         host='localhost',
         port='5436'
-    )
+        )
 
 def normalize_cycle(cycle: list) -> tuple:
     """Normalize a cycle to remove rotational duplicates."""
@@ -196,7 +196,7 @@ def precompute(comparison: str):
     G.add_edges_from((l['target'], l['source']) for l in links if l['type'] == 'LR') #make LRs undirected
     # k=min(n,200) approximation for large graphs
     n_nodes = G.number_of_nodes()
-    k = min(n_nodes, 300) if n_nodes > 300 else None
+    k = min(n_nodes, 500) if n_nodes > 500 else None
     betweenness = nx.betweenness_centrality(G, k=k, normalized=True)
     values = list(betweenness.values())
     if len(values) >= 4:
@@ -906,3 +906,122 @@ def perform_go_enrichment(
         "universe_warning": sanity['message'] if sanity['status'] == 'warning' else None,
         "results": res,
     })
+
+# user upload of case study
+# def run_ingestion(tmp_dir: Path, case_study_name: str, condition: str, ref_condition: str, organism: Literal['human', 'mouse'], split_complexes: bool, sanitize: bool):
+#     #split_complexes will be passed to dc.get_collectri
+#     from .ingest import CaseStudy, Node, Link, DB_URL
+#     import traceback
+#     from sqlalchemy import create_engine
+#     from sqlalchemy.orm import Session, declarative_base
+#     try:
+#         cs = CaseStudy(caseStudyName=case_study_name, conditions=[condition, ref_condition], organism=organism, split_complexes=split_complexes)
+#         cs.load_data(ccc_filename='CCC.csv', tf_filename='TF.csv', files_path=tmp_dir)
+#         if sanitize:
+#             cs.sanitize_celltypes(ref_path=tmp_dir / 'sanitize.csv')
+#         cs.aggregate_data()
+#         print(cs.nodes.head())
+        
+#         Base = declarative_base()
+#         engine = create_engine(DB_URL)
+#         Base.metadata.create_all(engine)
+
+#         with Session(engine) as session:
+#             for _, n in cs.nodes.iterrows():
+#                 session.add(Node(
+#                     name=n['name'],
+#                     celltype=n['celltype'],
+#                     moltype=n['moltype'],
+#                     intrascore=n['intrascore'],
+#                     casestudy=n['casestudy'],
+#                     comparison=n['comparison'],
+#                     verbose_id=f"{n['name']}__{n['celltype']}__{n['moltype']}__{n['comparison']}"
+#                 ))
+#             session.flush()
+
+#             db_nodes  = session.query(Node).filter_by(casestudy=case_study_name).all()
+#             node_map  = {
+#                 f"{n.name}__{n.celltype}__{n.moltype}__{n.comparison}": n.id
+#                 for n in db_nodes
+#             }
+
+#             cs.links["source"] = cs.links["from"].map(node_map)
+#             cs.links["target"] = cs.links["to"].map(node_map)
+#             cs.links = cs.links.dropna(subset=["source", "target"])
+
+#             for _, l in cs.links.iterrows():
+#                 #unnecessary to add drow for user-given data (arbitrary choice)
+#                 session.add(Link(
+#                     source=int(l['source']),
+#                     target=int(l['target']),
+#                     type=l['type'],
+#                     weight=float(l['weight']),
+#                     significance=float(l['significance']),
+#                     casestudy=cs.casestudy,
+#                     comparison=cs.comparison
+#                 ))
+#             session.commit()
+#         print(f"[upload] Ingestion complete for {case_study_name}")
+#     except Exception:
+#         traceback.print_exc()         # eventually to do: log this exception in a file
+#     finally:
+#         shutil.rmtree(tmp_dir)
+
+# # The HTTP 202 Accepted successful response status code indicates that a request has been accepted for processing, but processing has not been completed or may not have started.
+# # The HTTP 422 Unprocessable Entity status code indicates that while your API request was well-formed and syntactically valid, the server couldn't process it due to semantic or business logic errors in the request body. 
+# @router.post('/upload_case_study', status_code=202)
+# async def upload_case_study(
+#     background_tasks: BackgroundTasks,
+#     case_study_name: str = Form(...),
+#     condition: str = Form(...),
+#     ref_condition: str = Form(...),
+#     organism: Literal['human', 'mouse'] = Form(...),
+#     split_complexes: bool = Form(False),
+#     ccc_file: UploadFile = File(...),
+#     tf_file: UploadFile = File(...),
+#     sanitize_file: UploadFile | None = File(None)
+# ):
+#     import re
+#     for f in [case_study_name, condition, ref_condition]:
+#         if not re.fullmatch(r"[a-zA-Z0-9\-]+", f):
+#             raise HTTPException(status_code=422, detail=f"Invalid {f}. Only letters, numbers and hyphens (-) are allowed. ")
+#     if organism not in ['human', 'mouse']:
+#         raise HTTPException(status_code=422, detail="Invalid organism. Must be 'human' or 'mouse'.") #this is not really necessary, eventually remove it
+#     if condition == ref_condition:
+#         #this is very dumb
+#         raise HTTPException(status_code=422, detail="Condition and reference condition cannot be the same.")
+#     for f in (ccc_file, tf_file):
+#         if f.content_type != 'text/csv': #this is not really necessary, eventually remove it (Svelte should also take care of it)
+#             raise HTTPException(status_code=422, detail=f"Invalid file type for {f.filename}. Only CSV files are accepted." ) 
+
+#     import tempfile
+#     tmp_dir = Path(tempfile.mkdtemp(prefix = 'diffcellsig_upload_')) #save files to temporary directory, delete it after ingestion
+#     try:
+#         for upload, name in [(ccc_file, 'CCC.csv'), (tf_file, 'TF.csv')]:
+#             content = await upload.read()
+#             (tmp_dir / name).write_bytes(content)
+#         if sanitize_file is not None:
+#             content = await sanitize_file.read()
+#             (tmp_dir / 'sanitize.csv').write_bytes(content)
+#     except Exception as e:
+#         shutil.rmtree(tmp_dir, ignore_errors=True)
+#         raise HTTPException(status_code=500, detail=f"Failed to save files to temporary directory: {e}")
+    
+#     background_tasks.add_task(
+#         run_ingestion,
+#         tmp_dir = tmp_dir,
+#         case_study_name = case_study_name,
+#         condition = condition,
+#         ref_condition = ref_condition,
+#         organism = organism,
+#         split_complexes = split_complexes,
+#         sanitize = sanitize_file is not None
+#     )
+#     return JSONResponse(
+#         status_code=202,
+#         content={
+#             'message': 'Upload received. Ingestion running in background.',
+#             'caseStudy': case_study_name,
+#             'comparison': f"{condition}_vs_{ref_condition}"
+#         }
+#     )

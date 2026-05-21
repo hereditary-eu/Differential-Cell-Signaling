@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, Column, Integer, Float, String, ForeignKey
 from sqlalchemy.orm import Session, relationship, declarative_base
 import sys
 from pathlib import Path
-from .utils import aggregate_full_net, find_cycles, expand_links_dataframe
+from .utils import aggregate_full_net#, find_cycles, expand_links_dataframe
 import decoupler as dc
 
 DB_URL = 'postgresql+psycopg://postgres:postgres@localhost:5436/diffcellsig'
@@ -52,11 +52,14 @@ class CaseStudy():
         self.organism = organism
         self.split_complexes = split_complexes
 
-    def load_data(self, ccc_filename, tf_filename):
-        cwd = Path(__file__).parent.resolve()
+    def load_data(self, ccc_filename, tf_filename, files_path: Path = None):
+        # cwd = Path(__file__).parent.resolve()
+        files_path = Path(Path(__file__).parent.resolve() / 'data' / self.caseStudyName) if files_path is None else files_path
         try:
-            self.ccc = pd.read_csv(cwd / 'data' / self.caseStudyName / ccc_filename) # CCI results
-            self.tf = pd.read_csv(cwd / 'data' / self.caseStudyName / tf_filename) #TF activity results
+            # self.ccc = pd.read_csv(cwd / 'data' / self.caseStudyName / ccc_filename) # CCI results
+            # self.tf = pd.read_csv(cwd / 'data' / self.caseStudyName / tf_filename) #TF activity results
+            self.ccc = pd.read_csv(files_path / ccc_filename) # CCI results
+            self.tf = pd.read_csv(files_path / tf_filename) #TF activity results
         except Exception as e:
             print('Unable to access csv file', repr(e))
             sys.exit(1)
@@ -77,12 +80,16 @@ class CaseStudy():
         # if ccc_celltypes.difference(tf_celltypes):
         #     raise ValueError('Cell types in CCC and TFL results do not match')
         
-    def sanitize_celltypes(self):
-        cwd = Path(__file__).parent.resolve()
-        if Path.exists(cwd / 'data' / self.caseStudyName / 'sanitizeCelltypes.csv'):
+    def sanitize_celltypes(self, ref_path: Path = None):
+        if ref_path is None:
+            ref_path = Path(__file__).parent.resolve() / 'data' / self.caseStudyName / 'sanitizeCelltypes.csv'
+        if not Path.exists(ref_path):
+            print(f"No reference file for sanitizing cell types found at {ref_path}, skipping sanitization")
+            return
+        if Path.exists(ref_path):
             print('Sanitizing cell type names based on reference file')
         try:
-            ref_df = pd.read_csv(cwd / 'data' / self.caseStudyName / 'sanitizeCelltypes.csv')
+            ref_df = pd.read_csv(ref_path)
         except Exception as e:
             raise ValueError(f"Unable to read reference file: {repr(e)}")
         print(f"Reference dataframe :\n{ref_df}")

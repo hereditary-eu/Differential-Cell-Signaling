@@ -1,6 +1,13 @@
 <script lang="ts">
-	import { filteringQueryStr, sender, receiver, highlightedCycle, aesSettings, goResults } from '$lib/stores';
-	import type { GoResults, GoTerm } from '$lib/types';
+	import {
+		filteringQueryStr,
+		sender,
+		receiver,
+		highlightedCycle,
+		aesSettings,
+		goResults
+	} from '$lib/stores';
+	import type { GoResults } from '$lib/types';
 	const backend = import.meta.env.VITE_BACKEND_URL;
 	// CYCLES
 	let max_length = $state(12);
@@ -80,7 +87,11 @@
 	let goLoading = $state(false);
 	let goError = $state<string | null>(null);
 	// let goResult = $state<GoTerm[]>([]);
-	let goMeta = $state<{ query_size: number; background_size: number | null; n_significant: number } | null>(null);
+	let goMeta = $state<{
+		query_size: number;
+		background_size: number | null;
+		n_significant: number;
+	} | null>(null);
 
 	const ALL_SOURCES = ['GO:BP', 'GO:MF', 'GO:CC', 'KEGG', 'REAC', 'WP'];
 	const LR_DB_OPTS = [
@@ -97,10 +108,8 @@
 	];
 	const RTF_DB_OPTS = ['TF_PPR_KEGG_human', 'TF_PPR_KEGG_mouse'];
 
-	function toggleSource(src : string) {
-		sources = sources.includes(src)
-		? sources.filter(s => s !== src)
-		: [...sources, src];
+	function toggleSource(src: string) {
+		sources = sources.includes(src) ? sources.filter((s) => s !== src) : [...sources, src];
 	}
 
 	$effect(() => {
@@ -146,7 +155,7 @@
 			params.set('use_lr', String(useLR));
 			params.set('use_tf', String(useTF));
 			params.set('use_rtf', String(useRTF));
- 
+
 			if (useCustomBackground && customGenes.length > 0) {
 				params.set('use_custom_universe', 'true');
 				// Pass genes as repeated query params
@@ -162,7 +171,11 @@
 			const data: GoResults = await res.json();
 			console.log('go res:', data.results);
 			goResults.set(data);
-			goMeta = { query_size: data.query_size, background_size: data.background_size, n_significant: data.n_significant };
+			goMeta = {
+				query_size: data.query_size,
+				background_size: data.background_size,
+				n_significant: data.n_significant
+			};
 			onGoResults(data);
 		} catch (err: unknown) {
 			goError = err instanceof Error ? err.message : String(err);
@@ -173,7 +186,19 @@
 	}
 	function downloadCSV() {
 		if (!$goResults?.results?.length) return;
-		const cols = ['source', 'native', 'name', 'p_value', 'gene_ratio', 'term_size', 'query_size', 'intersection_size', 'precision', 'recall', 'intersections'];
+		const cols = [
+			'source',
+			'native',
+			'name',
+			'p_value',
+			'gene_ratio',
+			'term_size',
+			'query_size',
+			'intersection_size',
+			'precision',
+			'recall',
+			'intersections'
+		];
 		const header = cols.join(',');
 		const rows = ($goResults?.results ?? []).map((r) =>
 			cols
@@ -192,6 +217,14 @@
 		a.click();
 		URL.revokeObjectURL(url);
 	}
+	$effect(() => {
+		// whenever filtering query changes, reset GOEA state
+		$filteringQueryStr;
+		showGOEA = false;
+		goResults.set(null);
+		goMeta = null;
+		goError = null;
+	});
 </script>
 
 <div class="controls">
@@ -291,48 +324,58 @@
 	{/if}
 {/if}
 
-<hr style="width: 100%; border: 1px solid black;"/>
+<hr style="width: 100%; border: 1px solid black;" />
 
-<button id="GEA-btn" type="button" class="btn btn-primary" onclick={() => (showGOEA = !showGOEA)} style="width: 100%;">
+<button
+	id="GEA-btn"
+	type="button"
+	class="btn btn-primary"
+	onclick={() => (showGOEA = !showGOEA)}
+	style="width: 100%;"
+>
 	{showGOEA ? '▲' : '▼'} ORA Enrichment Analysis
 </button>
 {#if showGOEA}
-	<section class='goea-section'>
+	<section class="goea-section">
 		<div class="ctrl-group">
 			<label for="organism">Organism</label>
-			<div id='organism' class="segmented">
+			<div id="organism" class="segmented">
 				{#each [['mmusculus', 'Mouse'], ['hsapiens', 'Human']] as [val, label]}
-					<button class:active={organism === val} onclick={() => (organism = val as 'mmusculus' | 'hsapiens')}>
+					<button
+						class:active={organism === val}
+						onclick={() => (organism = val as 'mmusculus' | 'hsapiens')}
+					>
 						{label}
 					</button>
 				{/each}
 			</div>
 		</div>
 
-		<div class='ctrl-group'>
+		<div class="ctrl-group">
 			<label for="sources">Sources</label>
-			<div id="sources" class='chip-row'>
+			<div id="sources" class="chip-row">
 				{#each ALL_SOURCES as src}
 					<button
-					class='chip'
-					class:active={sources.includes(src)}
-					onclick={() => toggleSource(src)}>
+						class="chip"
+						class:active={sources.includes(src)}
+						onclick={() => toggleSource(src)}
+					>
 						{src}
 					</button>
 				{/each}
 			</div>
 		</div>
-		<div class='ctrl-group'>
-			<label for='correction-method'>Correction method</label>
-			<select id='correction-method' bind:value={significanceMethod}>
-				<option value='g_SCS'>g:SCS (default)</option>
-				<option value='bonferroni'>Bonferroni</option>
-				<option value='fdr'>FDR (BH) </option>
+		<div class="ctrl-group">
+			<label for="correction-method">Correction method</label>
+			<select id="correction-method" bind:value={significanceMethod}>
+				<option value="g_SCS">g:SCS (default)</option>
+				<option value="bonferroni">Bonferroni</option>
+				<option value="fdr">FDR (BH) </option>
 			</select>
 		</div>
-		<div class='ctrl-group'>
-			<label for='pv-cutoff'>(adjusted) p-value cutoff</label>
-			<input id='pv-cutoff' type='number' min='0' max='1' step='0.01' bind:value={pvCutoff} />
+		<div class="ctrl-group">
+			<label for="pv-cutoff">(adjusted) p-value cutoff</label>
+			<input id="pv-cutoff" type="number" min="0" max="1" step="0.01" bind:value={pvCutoff} />
 		</div>
 		<div class="ctrl-group">
 			<label for="split-complexes">Split protein complexes</label>
@@ -340,7 +383,12 @@
 				<input type="checkbox" id="split-complexes" bind:checked={splitSubunits} />
 				<label for="split-complexes" style="margin:0; font-weight:normal;">Split subunits</label>
 				{#if splitSubunits}
-					<input type="text" placeholder="delimiter" bind:value={subunitsDelimiter} style="width:4rem;" />
+					<input
+						type="text"
+						placeholder="delimiter"
+						bind:value={subunitsDelimiter}
+						style="width:4rem;"
+					/>
 				{/if}
 			</div>
 		</div>
@@ -378,9 +426,16 @@
 			{:else}
 				<div class="custom-bg-upload">
 					<label for="bg-file" class="upload-label">
-						{customBackgroundFile ? customBackgroundFile.name : 'Upload gene list (.txt or .csv, comma-separated)'}
+						{customBackgroundFile
+							? customBackgroundFile.name
+							: 'Upload gene list (.txt or .csv, comma-separated)'}
 					</label>
-					<input id="bg-file" type="file" accept=".txt,.csv" onchange={handleCustomBackgroundFile} />
+					<input
+						id="bg-file"
+						type="file"
+						accept=".txt,.csv"
+						onchange={handleCustomBackgroundFile}
+					/>
 					{#if customGenes.length > 0}
 						<span class="gene-count">{customGenes.length} genes loaded</span>
 					{/if}
@@ -390,20 +445,24 @@
 		<button
 			class="run-btn"
 			onclick={runEnrichment}
-			disabled={goLoading || sources.length === 0 || (useCustomBackground && customGenes.length === 0)}
+			disabled={goLoading ||
+				sources.length === 0 ||
+				(useCustomBackground && customGenes.length === 0)}
 		>
 			{#if goLoading}<span class="spinner"></span> Running…{:else}▶ Run Enrichment{/if}
 		</button>
- 
+
 		{#if goError}
 			<div class="go-error">{goError}</div>
 		{/if}
- 
+
 		{#if goMeta}
 			<div class="go-meta-bar">
 				<span><strong>{goMeta.n_significant}</strong> significant terms</span>
 				<span>Query: <strong>{goMeta.query_size}</strong> genes</span>
-				{#if goMeta.background_size}<span>Background: <strong>{goMeta.background_size}</strong></span>{/if}
+				{#if goMeta.background_size}<span
+						>Background: <strong>{goMeta.background_size}</strong></span
+					>{/if}
 				{#if ($goResults?.results?.length ?? 0) > 0}
 					<button class="download-btn" onclick={downloadCSV}>⬇ Download CSV</button>
 				{/if}
@@ -455,7 +514,10 @@
 		margin-bottom: 0.5rem;
 		font-size: 0.8rem;
 	}
-	.count { font-weight: 600; color: var(--color-text, #111); }
+	.count {
+		font-weight: 600;
+		color: var(--color-text, #111);
+	}
 	.badge.truncated {
 		padding: 1px 6px;
 		border-radius: 999px;
@@ -474,7 +536,9 @@
 		background: transparent;
 		color: var(--color-text-muted, #6b7280);
 	}
-	.clear-btn:hover { background: var(--color-surface-hover, #f3f4f6); }
+	.clear-btn:hover {
+		background: var(--color-surface-hover, #f3f4f6);
+	}
 	.cycle-list {
 		list-style: none;
 		padding: 0;
@@ -492,7 +556,9 @@
 		padding: 0.5rem 0.6rem;
 		background: var(--color-surface, #fafafa);
 		cursor: pointer;
-		transition: border-color 0.15s, box-shadow 0.15s;
+		transition:
+			border-color 0.15s,
+			box-shadow 0.15s;
 	}
 	.cycle-card.active {
 		border: 2px solid #000;
@@ -504,9 +570,22 @@
 		gap: 0.4rem;
 		margin-bottom: 0.45rem;
 	}
-	.cycle-label { font-weight: 700; font-size: 0.75rem; color: var(--color-text, #111); }
-	.cycle-meta { font-size: 0.7rem; color: var(--color-text-muted, #9ca3af); }
-	.flow { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; row-gap: 4px; }
+	.cycle-label {
+		font-weight: 700;
+		font-size: 0.75rem;
+		color: var(--color-text, #111);
+	}
+	.cycle-meta {
+		font-size: 0.7rem;
+		color: var(--color-text-muted, #9ca3af);
+	}
+	.flow {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 2px;
+		row-gap: 4px;
+	}
 	.node-pill {
 		display: inline-flex;
 		align-items: center;
@@ -522,19 +601,52 @@
 		text-overflow: ellipsis;
 		color: #374151;
 	}
-	.node-pill.back-ref { opacity: 0.5; font-style: italic; }
-	.edge-badge-wrap { display: inline-flex; align-items: center; gap: 1px; font-size: 0.65rem; }
-	.edge-arrow { color: #9ca3af; font-size: 0.8rem; line-height: 1; }
-	.msg { font-size: 0.8rem; margin: 0.5rem 0; }
-	.error { color: #dc2626; }
-	.muted { color: var(--color-text-muted, #9ca3af); }
-	.cycle-details { font-size: 0.75rem; padding: 0.4rem 0.6rem; background: #f9fafb; border-radius: 0 0 8px 8px; }
-	.cycle-details ul { margin: 0.25rem 0 0 1rem; padding: 0; }
-	.cycle-details li { margin-bottom: 0.2rem; }
+	.node-pill.back-ref {
+		opacity: 0.5;
+		font-style: italic;
+	}
+	.edge-badge-wrap {
+		display: inline-flex;
+		align-items: center;
+		gap: 1px;
+		font-size: 0.65rem;
+	}
+	.edge-arrow {
+		color: #9ca3af;
+		font-size: 0.8rem;
+		line-height: 1;
+	}
+	.msg {
+		font-size: 0.8rem;
+		margin: 0.5rem 0;
+	}
+	.error {
+		color: #dc2626;
+	}
+	.muted {
+		color: var(--color-text-muted, #9ca3af);
+	}
+	.cycle-details {
+		font-size: 0.75rem;
+		padding: 0.4rem 0.6rem;
+		background: #f9fafb;
+		border-radius: 0 0 8px 8px;
+	}
+	.cycle-details ul {
+		margin: 0.25rem 0 0 1rem;
+		padding: 0;
+	}
+	.cycle-details li {
+		margin-bottom: 0.2rem;
+	}
 
 	/* ── GOEA ── */
-	hr { margin: 0.75rem 0; border: none; border-top: 1px solid var(--color-border, #e5e7eb); }
- 
+	hr {
+		margin: 0.75rem 0;
+		border: none;
+		border-top: 1px solid var(--color-border, #e5e7eb);
+	}
+
 	.goea-section {
 		display: flex;
 		flex-direction: column;
@@ -570,8 +682,15 @@
 		color: var(--color-text, #374151);
 		transition: background 0.12s;
 	}
-	.segmented button.active { background: #000; color: #fff; }
-	.chip-row { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+	.segmented button.active {
+		background: #000;
+		color: #fff;
+	}
+	.chip-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.3rem;
+	}
 	.chip {
 		padding: 2px 8px;
 		border-radius: 999px;
@@ -580,9 +699,16 @@
 		font-size: 0.72rem;
 		cursor: pointer;
 		color: #374151;
-		transition: background 0.12s, border-color 0.12s;
+		transition:
+			background 0.12s,
+			border-color 0.12s;
 	}
-	.chip.active { background: #f3f4f6; border-color: #000; color: #000; font-weight: 600; }
+	.chip.active {
+		background: #f3f4f6;
+		border-color: #000;
+		color: #000;
+		font-weight: 600;
+	}
 	select {
 		padding: 0.2rem 0.4rem;
 		border: 1px solid var(--color-border, #d1d5db);
@@ -592,17 +718,37 @@
 		color: var(--color-text, #111);
 		width: 100%;
 	}
-	select:disabled { opacity: 0.4; }
-	.inline-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-	.db-selects { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.2rem; }
+	select:disabled {
+		opacity: 0.4;
+	}
+	.inline-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+	.db-selects {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+		margin-top: 0.2rem;
+	}
 	.db-row {
 		display: grid;
 		grid-template-columns: 1.2rem 2.8rem 1fr;
 		align-items: center;
 		gap: 0.35rem;
 	}
-	.db-row label { font-size: 0.72rem; font-weight: 600; color: #6b7280; }
-	.custom-bg-upload { display: flex; flex-direction: column; gap: 0.3rem; }
+	.db-row label {
+		font-size: 0.72rem;
+		font-weight: 600;
+		color: #6b7280;
+	}
+	.custom-bg-upload {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+	}
 	.upload-label {
 		display: inline-block;
 		padding: 0.3rem 0.6rem;
@@ -613,9 +759,17 @@
 		font-size: 0.75rem;
 		cursor: pointer;
 	}
-	.upload-label:hover { background: #dbeafe; }
-	input[type='file'] { display: none; }
-	.gene-count { font-size: 0.72rem; color: #16a34a; font-weight: 600; }
+	.upload-label:hover {
+		background: #dbeafe;
+	}
+	input[type='file'] {
+		display: none;
+	}
+	.gene-count {
+		font-size: 0.72rem;
+		color: #16a34a;
+		font-weight: 600;
+	}
 	.run-btn {
 		display: flex;
 		align-items: center;
@@ -631,8 +785,13 @@
 		cursor: pointer;
 		transition: background 0.15s;
 	}
-	.run-btn:hover:not(:disabled) { background: #495057; }
-	.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+	.run-btn:hover:not(:disabled) {
+		background: #495057;
+	}
+	.run-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
 	.go-error {
 		font-size: 0.75rem;
 		color: #dc2626;
@@ -664,8 +823,10 @@
 		cursor: pointer;
 		font-weight: 600;
 	}
-	.download-btn:hover { background: #dcfce7; }
- 
+	.download-btn:hover {
+		background: #dcfce7;
+	}
+
 	.spinner {
 		display: inline-block;
 		width: 10px;
@@ -676,5 +837,9 @@
 		animation: spin 0.6s linear infinite;
 		vertical-align: middle;
 	}
-	@keyframes spin { to { transform: rotate(360deg); } }
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
 </style>

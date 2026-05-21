@@ -5,6 +5,7 @@
 	import SidebarSearch from './SidebarSearch.svelte';
 	import NetworkGraphZoom from './NetworkGraphZoom.svelte';
 	import NetworkCircular from './NetworkCircular.svelte';
+	import NetworkHive from './NetworkHive.svelte';
 	import FullNetwork from './NetworkFull.svelte';
 	import VisSeparateOverview from './OverviewVis.svelte';
 	import NetworkTree from './NetworkTree.svelte';
@@ -38,7 +39,13 @@
 		b_topMols: any[];
 		p_topMols: any[];
 	}
-	let networkData = $state({ nodes: [], links: [], stats: {} as NetworkStats, p_top3Mols: [], b_top3Mols: [] });
+	let networkData = $state({
+		nodes: [],
+		links: [],
+		stats: {} as NetworkStats,
+		p_top3Mols: [],
+		b_top3Mols: []
+	});
 	let fullNet = $state({
 		nodes: [],
 		links: [],
@@ -84,28 +91,32 @@
 		try {
 			const res = await fetch(url);
 			networkData = await res.json();
-			console.log('from loadFilteredData: ', networkData.p_top3Mols[0]['id'])
+			console.log('from loadFilteredData: ', networkData.p_top3Mols[0]['id']);
 			selectedNode.set(networkData.p_top3Mols[0]['id']);
-			selectedNodeName.set(networkData.p_top3Mols[0]['name'])
+			selectedNodeName.set(networkData.p_top3Mols[0]['name']);
 		} catch (err) {
 			console.error('Error loading data:', err);
 		}
 	}
 	function handleGoResults(data: GoResults | null) {
 		goResults.set(data);
-		// If new results arrived, scroll the GOEA panel into view 
+		// If new results arrived, scroll the GOEA panel into view
 		if (data) {
 			setTimeout(() => {
-				document.getElementById('goea-results-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				document
+					.getElementById('goea-results-panel')
+					?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 			}, 100);
 		}
 	}
-
 </script>
 
 <div class="app">
 	<div class="d-flex">
-		<aside class="bg-light border-end" style="width: 20%; position: sticky; top: 0; height: 100vh; overflow-y: auto;">
+		<aside
+			class="bg-light border-end"
+			style="width: 20%; position: sticky; top: 0; height: 100vh; overflow-y: auto;"
+		>
 			<div class="accordion" id="leftSidebarAccordion">
 				<div class="accordion-item">
 					<h2 class="accordion-header" id="CaseStudies">
@@ -128,12 +139,12 @@
 					>
 						<div class="accordion-body">
 							<SidebarCaseStudies />
-								<br />
-									<p class="card-text" >
-										N. cell types: {$celltypes.length} <br />
-										Total nodes: {fullNet.total_nodes} <br />
-										Total links: {fullNet.total_links} <br />
-									</p>
+							<br />
+							<p class="card-text">
+								N. cell types: {$celltypes.length} <br />
+								Total nodes: {fullNet.total_nodes} <br />
+								Total links: {fullNet.total_links} <br />
+							</p>
 						</div>
 					</div>
 				</div>
@@ -169,9 +180,9 @@
 								</ul>
 								<li>Filtered links: {networkData.stats.nLinks}</li>
 								<ul>
-									<li>LR links: {networkData.stats.nLRLinks} </li>
-									<li>TFL links: {networkData.stats.nTFLLinks} </li>
-									<li>RTF links: {networkData.stats.nRTFLinks} </li>
+									<li>LR links: {networkData.stats.nLRLinks}</li>
+									<li>TFL links: {networkData.stats.nTFLLinks}</li>
+									<li>RTF links: {networkData.stats.nRTFLinks}</li>
 								</ul>
 							</ul>
 						</div>
@@ -230,21 +241,49 @@
 		<main class="flex-grow-1 p-4" id="graph-area">
 			<svg width="0" height="0" style="position:absolute; pointer-events:none;">
 				<defs>
-					<marker id="arrow" viewBox="0 -5 10 10" refX="9" refY="0"
-						markerWidth="6" markerHeight="6" orient="auto">
-						<path d="M0,-5L10,0L0,5" fill="#999"/>
+					<marker
+						id="arrow"
+						viewBox="0 -5 10 10"
+						refX="9"
+						refY="0"
+						markerWidth="6"
+						markerHeight="6"
+						orient="auto"
+					>
+						<path d="M0,-5L10,0L0,5" fill="#999" />
 					</marker>
-					<marker id="Tblunt" viewBox="-2 -6 4 12" refX="1" refY="0"
-						markerWidth="10" markerHeight="10" orient="auto">
-						<path d="M0,-6L0,6" stroke="#999" stroke-width="2"/>
+					<marker
+						id="Tblunt"
+						viewBox="-2 -6 4 12"
+						refX="1"
+						refY="0"
+						markerWidth="10"
+						markerHeight="10"
+						orient="auto"
+					>
+						<path d="M0,-6L0,6" stroke="#999" stroke-width="2" />
 					</marker>
-					<marker id="leg-arrow" viewBox="0 -3 6 6" refX="5" refY="0"
-						markerWidth="4" markerHeight="4" orient="auto">
-						<path d="M0,-3L6,0L0,3" fill="#999"/>
+					<marker
+						id="leg-arrow"
+						viewBox="0 -3 6 6"
+						refX="5"
+						refY="0"
+						markerWidth="4"
+						markerHeight="4"
+						orient="auto"
+					>
+						<path d="M0,-3L6,0L0,3" fill="#999" />
 					</marker>
-					<marker id="leg-blunt" viewBox="-2 -4 4 8" refX="1" refY="0"
-						markerWidth="6" markerHeight="6" orient="auto">
-						<line x1="0" y1="-4" x2="0" y2="4" stroke="#999" stroke-width="1.5"/>
+					<marker
+						id="leg-blunt"
+						viewBox="-2 -4 4 8"
+						refX="1"
+						refY="0"
+						markerWidth="6"
+						markerHeight="6"
+						orient="auto"
+					>
+						<line x1="0" y1="-4" x2="0" y2="4" stroke="#999" stroke-width="1.5" />
 					</marker>
 				</defs>
 			</svg>
@@ -266,7 +305,7 @@
 				>
 					<p class="card-header">Overview</p>
 					<div style="flex: 1; min-height: 0; overflow-y: auto">
-						<VisSeparateOverview fullNet={fullNet as any}/>
+						<VisSeparateOverview fullNet={fullNet as any} />
 					</div>
 				</div>
 			</div>
@@ -300,28 +339,66 @@
 								aria-expanded="false">...</a
 							>
 							<div class="dropdown-menu" data-bs-popper="static">
-								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.CT = !$aesSettings.CT)}>CellTypes color</a>
+								<a
+									class="dropdown-item"
+									href="#drop"
+									onclick={() => ($aesSettings.CT = !$aesSettings.CT)}>CellTypes color</a
+								>
 								<div class="dropdown-divider"></div>
-								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.LR = 'viridis')}>LR viridis</a>
-								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.LR = 'volcano')}>LR volcano</a>
-								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.LR = 'reset')}>LR reset</a>
+								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.LR = 'viridis')}
+									>LR viridis</a
+								>
+								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.LR = 'volcano')}
+									>LR volcano</a
+								>
+								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.LR = 'reset')}
+									>LR reset</a
+								>
 								<div class="dropdown-divider"></div>
-								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.TF = 'endShape')}>TFL action</a>
-								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.TF = 'reset')}>TFL reset</a>
+								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.TF = 'endShape')}
+									>TFL action</a
+								>
+								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.TF = 'reset')}
+									>TFL reset</a
+								>
 								<div class="dropdown-divider"></div>
-								<a class="dropdown-item" href="#drop" onclick={() => ($aesSettings.groupNodes = !$aesSettings.groupNodes)}>Group TFs</a>
+								<a
+									class="dropdown-item"
+									href="#drop"
+									onclick={() => ($aesSettings.groupNodes = !$aesSettings.groupNodes)}>Group TFs</a
+								>
 							</div>
 						</li>
 					</ul>
-					<div id="tabContainer" class="tab-content" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
-						<div class="tab-pane fade show active" id="network-zoom" role="tabpanel" style="flex: 1; min-height: 0; height: 100%;">
+					<div
+						id="tabContainer"
+						class="tab-content"
+						style="flex: 1; min-height: 0; display: flex; flex-direction: column;"
+					>
+						<div
+							class="tab-pane fade show active"
+							id="network-zoom"
+							role="tabpanel"
+							style="flex: 1; min-height: 0; height: 100%;"
+						>
 							<NetworkGraphZoom {networkData} />
 						</div>
-						<div class="tab-pane fade" id="network-circular" role="tabpanel" style="flex: 1; min-height: 0; height: 100%;">
+						<div
+							class="tab-pane fade"
+							id="network-circular"
+							role="tabpanel"
+							style="flex: 1; min-height: 0; height: 100%;"
+						>
 							<NetworkCircular {networkData} />
 						</div>
-						<div class="tab-pane fade" id="network-hive" role="tabpanel" style="flex: 1; min-height: 0; height: 100%;">
-							<p style="margin: 1rem;">Hive layout coming soon...</p>
+						<div
+							class="tab-pane fade"
+							id="network-hive"
+							role="tabpanel"
+							style="flex: 1; min-height: 0; height: 100%;"
+						>
+							<!-- <p style="margin: 1rem;">Hive layout coming soon...</p> -->
+							<NetworkHive {networkData} />
 						</div>
 					</div>
 				</div>
@@ -332,7 +409,7 @@
 					<!-- <p class="card-header">
 						{#if $selectedNodeName}Detailed Tree for {$selectedNodeName}{:else}Detailed Tree{/if}
         			</p> -->
-        			<div style="flex: 1; min-height: 0;">
+					<div style="flex: 1; min-height: 0;">
 						{#if $selectedNodeName}
 							<NetworkTree />
 						{:else}
@@ -346,13 +423,12 @@
 				<div id="goea-results-panel" class="card border-primary mb-3" style="width: 100%;">
 					<p class="card-header d-flex align-items-center gap-2">
 						GProfiler ORA Enrichment Analysis Results
-							<span class="badge bg-success ms-2">{$goResults?.n_significant} significant terms</span>
-							{#if $goResults?.universe_warning}
-								<span
-									class="badge bg-warning text-dark ms-1"
-									title={$goResults.universe_warning}
-								>Universe warning</span>
-							{/if}
+						<span class="badge bg-success ms-2">{$goResults?.n_significant} significant terms</span>
+						{#if $goResults?.universe_warning}
+							<span class="badge bg-warning text-dark ms-1" title={$goResults.universe_warning}
+								>Universe warning</span
+							>
+						{/if}
 					</p>
 					<div style="min-height: 200px;">
 						<GOEAResults />

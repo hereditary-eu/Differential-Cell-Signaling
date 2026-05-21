@@ -2,13 +2,24 @@
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
 	import {
-		drawNode, highlightNode, aesEdge, trimPath,
-		applyHighlightSearch, resetNodesSize, deduplicateTFs,
-		applyCycleHighlight, updateEdgesAes, updateNodeColors
+		drawNode,
+		highlightNode,
+		aesEdge,
+		trimPath,
+		applyHighlightSearch,
+		resetNodesSize,
+		deduplicateTFs,
+		applyCycleHighlight,
+		updateEdgesAes,
+		updateNodeColors
 	} from './utils';
 	import {
-		colorScale, selectedNode, selectedNodeName,
-		highlightedNode, aesSettings, highlightedCycle
+		colorScale,
+		selectedNode,
+		selectedNodeName,
+		highlightedNode,
+		aesSettings,
+		highlightedCycle
 	} from '$lib/stores';
 	import DrawNetLegend from './drawNetLegend.svelte';
 
@@ -29,11 +40,11 @@
 
 	$: {
 		const groupChanged = $aesSettings.groupNodes !== prevGroupNodes;
-		const dataChanged  = networkData !== prevNetworkData;
+		const dataChanged = networkData !== prevNetworkData;
 
 		if (groupChanged || dataChanged) {
-			prevGroupNodes   = $aesSettings.groupNodes;
-			prevNetworkData  = networkData;
+			prevGroupNodes = $aesSettings.groupNodes;
+			prevNetworkData = networkData;
 			// also sync style trackers so their $: blocks don't fire after render
 			prevCT = $aesSettings.CT;
 			prevLR = $aesSettings.LR;
@@ -61,29 +72,39 @@
 	}
 
 	$: applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
-	$: applyCycleHighlight($highlightedCycle, nodeSelection, linkSelection, $colorScale, $aesSettings);
+	$: applyCycleHighlight(
+		$highlightedCycle,
+		nodeSelection,
+		linkSelection,
+		$colorScale,
+		$aesSettings
+	);
 
-		const bundleLine = d3
+	const bundleLine = d3
 		.line<[number, number]>()
 		.x((p) => p[0])
 		.y((p) => p[1])
 		.curve(d3.curveBundle.beta(0.88)); // beta is how aggressively edges bundle
-		
+
 	function renderNetwork() {
 		if (!svgContainer || !containerDiv) return;
 		if (!networkData?.nodes?.length) return;
 		simulation?.stop();
 
-		const W = containerDiv.clientWidth  || 600;
+		const W = containerDiv.clientWidth || 600;
 		const H = containerDiv.clientHeight || 500;
 
 		const safeNodes = networkData.nodes.map((d) => ({
-			...d, x: undefined, y: undefined, fx: undefined, fy: undefined
+			...d,
+			x: undefined,
+			y: undefined,
+			fx: undefined,
+			fy: undefined
 		}));
 		const safeLinks = networkData.links.map((l) => ({
 			...l,
 			source: typeof l.source === 'object' ? l.source.id : l.source,
-			target: typeof l.target === 'object' ? l.target.id : l.target,
+			target: typeof l.target === 'object' ? l.target.id : l.target
 		}));
 
 		const { nodes: rawNodes, links: rawLinks } = $aesSettings.groupNodes
@@ -96,7 +117,7 @@
 		const simLinks = links.map((l: any) => ({
 			...l,
 			source: nodeById.get(typeof l.source === 'object' ? l.source.id : l.source) ?? l.source,
-			target: nodeById.get(typeof l.target === 'object' ? l.target.id : l.target) ?? l.target,
+			target: nodeById.get(typeof l.target === 'object' ? l.target.id : l.target) ?? l.target
 		}));
 
 		d3.select(svgContainer).selectAll('*').remove();
@@ -108,17 +129,21 @@
 			.style('cursor', 'grab');
 
 		const zoomLayer = svg.append('g');
-		const zoom = d3.zoom<SVGSVGElement, unknown>()
-			.on('zoom', (event) => { zoomLayer.attr('transform', event.transform); });
+		const zoom = d3.zoom<SVGSVGElement, unknown>().on('zoom', (event) => {
+			zoomLayer.attr('transform', event.transform);
+		});
 		svg.call(zoom as any);
 		svg.call(zoom.transform, d3.zoomIdentity.translate(W / 3, H / 3).scale(0.5));
 
 		simulation = d3
 			.forceSimulation(nodes)
-			.force('link', d3.forceLink(simLinks)
-				.id((d: any) => d.id)
-				.distance(15)
-				.strength(0.1)
+			.force(
+				'link',
+				d3
+					.forceLink(simLinks)
+					.id((d: any) => d.id)
+					.distance(15)
+					.strength(0.1)
 			)
 			.force('charge', d3.forceManyBody().strength(-23))
 			.force('center', d3.forceCenter(W / 2, H / 2));
@@ -139,9 +164,7 @@
 			.selectAll('g')
 			.data(nodes)
 			.join('g')
-			.attr('stroke', (d: any) =>
-				($aesSettings.groupNodes && d._mergedCount > 1) ? '#000' : '#fff'
-			)
+			.attr('stroke', (d: any) => ($aesSettings.groupNodes && d._mergedCount > 1 ? '#000' : '#fff'))
 			.call((sel) => drawNode(sel, $colorScale, $aesSettings.CT))
 			.on('click', (event: any, d: { id: string; name: string; _mergedCount: number }) => {
 				if (d._mergedCount > 1) return;
@@ -173,13 +196,15 @@
 			if (d._mergedNames?.length > 1) {
 				return `Merged TFs (${d._mergedCount}):\n${d._mergedNames.join('\n')}\n(${d.celltype})`;
 			}
-			return `${d.name}\n(${d.celltype})\n${d.moltype}\nB.: ${d.betweenness.toFixed(4)}\nP.: ${d.pagerank.toFixed(4)}`;
+			return `${d.name}\n(${d.celltype})\n${d.moltype}\nB.: ${d.betweenness?.toFixed(4)}\nP.: ${d.pagerank?.toFixed(4)}`;
 		});
-		link.append('title').text((d: any) =>
-			d.type === 'LR'
-				? `LR (${d.source.name} → ${d.target.name}) weight: ${d.weight.toFixed(4)} significance: ${d.significance.toFixed(4)}`
-				: `${d.type} (${d.source.name} → ${d.target.name})`
-		);
+		link
+			.append('title')
+			.text((d: any) =>
+				d.type === 'LR'
+					? `LR (${d.source.name} → ${d.target.name}) weight: ${d.weight.toFixed(4)} significance: ${d.significance.toFixed(4)}`
+					: `${d.type} (${d.source.name} → ${d.target.name})`
+			);
 
 		simulation.on('tick', () => {
 			link.attr('d', (d: any) => {
@@ -201,8 +226,12 @@
 		applyHighlightSearch($highlightedNode, nodeSelection, linkSelection, networkData);
 	}
 
-	onMount(() => { requestAnimationFrame(() => renderNetwork()); });
-	onDestroy(() => { simulation?.stop(); });
+	onMount(() => {
+		requestAnimationFrame(() => renderNetwork());
+	});
+	onDestroy(() => {
+		simulation?.stop();
+	});
 </script>
 
 <div style="position: relative; width: 100%; height: 100%;">
