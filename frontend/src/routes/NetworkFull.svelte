@@ -2,7 +2,8 @@
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
 	import { NetworkLens } from './NetworkLens';
-
+	import { downloadSVG } from './downloadSVG';
+	import { selectedComparison } from '$lib/stores';
 	export let fullNet: { nodes: any[]; links: any[]; stats?: any };
 
 	let svgEl: SVGSVGElement;
@@ -365,7 +366,9 @@
 		lens.setEnabled(lensEnabled);
 		lensEnabled = lensEnabled;
 	}
-
+	function handleDownloadSVG() {
+		downloadSVG(svgEl, `${$selectedComparison}_fullNetVis_${metric}.svg`);
+	}
 	$: if (fullNet?.nodes?.length) render();
 	onMount(() => {
 		resizeObserver = new ResizeObserver((entries) => {
@@ -416,7 +419,7 @@
 			style="font-size:12px; padding:2px 9px; border-radius:4px; border:1px solid #bbb;
 				background:{lensEnabled ? '#000000' : 'transparent'};
 				color:{lensEnabled ? '#fff' : '#444'}; cursor:pointer;
-				display:flex; align-items:center; gap:4px;"
+				display:flex; gap:4px;"
 		>
 			<!-- magnifier icon -->
 			<svg
@@ -437,6 +440,14 @@
 			Lens
 		</button>
 	</span>
+	<button
+		onclick={handleDownloadSVG}
+		style="font-size:12px; padding:2px 9px; 
+				background:'transparent'; color:'#444';
+				border-radius:4px; border:1px solid #bbb;
+				cursor:pointer;
+				display:flex; gap:4px; margin-right:6px; ">Download SVG</button
+	>
 </div>
 
 <svg bind:this={svgEl} style="width:100%; height:100%;"></svg>

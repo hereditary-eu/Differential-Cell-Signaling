@@ -8,10 +8,12 @@
 		selectedNode,
 		selectedNodeName,
 		neighborhoodData,
-		filteringQueryStr
+		filteringQueryStr,
+		selectedComparison
 	} from '$lib/stores';
 	import { aesEdge, drawNode, trimPath, deduplicateTFs } from './utils';
 	import GroupToggle from './GroupToggle.svelte';
+	import { downloadSVG } from './downloadSVG';
 
 	let groupNodes = $state(true);
 	let isHorizontal = $state(true);
@@ -19,6 +21,9 @@
 
 	const backend = import.meta.env.VITE_BACKEND_URL ?? '';
 
+	function handleDownloadSVG() {
+		downloadSVG(svgContainer, `${$selectedComparison}_${$selectedNodeName}_Neighborhood_${maxSteps}steps_${$sender}_${$receiver}.svg`);
+	}
 	// update selectedNode and pass neighboorhoodData to detailed view
 	$effect(() => {
 		if ($selectedNode) {
@@ -372,6 +377,14 @@
 			{/if}
 		</button>
 		<GroupToggle bind:checked={groupNodes} label="Group TFs" />
+		<button
+		onclick={handleDownloadSVG}
+		style="font-size:11px; padding:2px 9px; 
+				background:'transparent'; color:'#444';
+				border-radius:4px; border:1px solid #bbb;
+				cursor:pointer;
+				display:flex; gap:4px; margin-right:6px; ">Download SVG</button
+	>
 	</div>
 	<div bind:this={containerDiv} style="flex: 1; min-height: 0; width: 100%;">
 		<svg bind:this={svgContainer} style="width: 100%; height: 100%; display: block;"></svg>

@@ -10,7 +10,8 @@
 		highlightedNode,
 		highlightedCycle,
 		selectedNode,
-		selectedNodeName
+		selectedNodeName,
+		selectedComparison
 	} from '$lib/stores';
 	import {
 		drawNode,
@@ -25,10 +26,37 @@
 		updateNodeColors
 	} from './utils';
 	import DrawNetLegend from './drawNetLegend.svelte';
-	// import DownloadButton from './DownloadButton.svelte';
+	import { toSvg } from 'html-to-image';
 
 	export let networkData: { nodes: any[]; links: any[] };
+	let exportContainer: HTMLDivElement;
+	async function handleDownloadSVG() {
+		if (!exportContainer) return;
 
+		const dataUrl = await toSvg(exportContainer, {
+			backgroundColor: 'white',
+			cacheBust: true,
+			filter: (node) => {
+				// exclude controls/buttons if needed
+				if (
+					node instanceof HTMLElement &&
+					node.classList?.contains('no-export')
+				) {
+					return false;
+				}
+
+				return true;
+			}
+		});
+
+		const a = document.createElement('a');
+		a.href = dataUrl;
+		a.download = `${$selectedComparison}_${$sender}_${$receiver}_NetworkCircular.svg`;
+		a.click();
+	}
+	export async function expdownloadSVG() {
+		await handleDownloadSVG();
+	}
 	let svgContainer: SVGSVGElement;
 	let simulation: d3.Simulation<any, undefined>;
 	let containerDiv: HTMLDivElement;
@@ -497,7 +525,7 @@
 	// const getSvgEl = (): SVGSVGElement | null => svgContainer ?? null;
 </script>
 
-<div style="position: relative; width: 100%; height: 100%;">
+<div bind:this={exportContainer} style="position: relative; width: 100%; height: 100%;">
 	<DrawNetLegend />
 	<!-- <DownloadButton {getSvgEl} /> -->
 	<div bind:this={containerDiv} style="width: 100%; height: 100%;">

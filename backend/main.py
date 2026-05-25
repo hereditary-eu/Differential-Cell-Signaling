@@ -9,12 +9,13 @@ import networkx as nx
 from collections import Counter, defaultdict, deque
 import pandas as pd
 from gprofiler import GProfiler
-# import shutil
-# from pathlib import Path
 import os
-# router = APIRouter()
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
+load_dotenv() #take environment variables from backend/.env file
+
 app = FastAPI()
-# app.include_router(router, prefix='/api')
 origins = ['http://localhost:5173', 'http://127.0.0.1:5173'] #allow frontend to connect #ATTENTION: if backend is run as 127.0.0.1, CORS error arises! so use 0.0.0.0
 app.add_middleware(
     CORSMiddleware,
@@ -910,8 +911,9 @@ def perform_go_enrichment(
 
 #towards deployment
 #tell fastapi to serve build/index.html for any route that is not an API endpoint
-from fastapi.staticfiles import StaticFiles
-app.mount('/', StaticFiles(directory='build', html=True), name = 'static')
+build_dir = Path(__file__).parent / 'build'
+if build_dir.exists():
+    app.mount('/', StaticFiles(directory=str(build_dir), html=True), name = 'static')
 
 # ----------------------------- TO DO
 # user upload of case study

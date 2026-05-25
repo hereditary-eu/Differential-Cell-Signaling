@@ -22,9 +22,9 @@
 		aesSettings,
 		goResults
 	} from '$lib/stores';
-	import type { GoResults } from '$lib/types';
-	// const backend = import.meta.env.VITE_BACKEND_URL;
+
 	const backend = import.meta.env.VITE_BACKEND_URL ?? ''; // for deployment fallback to empty string
+
 	interface NetworkStats {
 		nNodes: number;
 		nLigands: number;
@@ -98,15 +98,21 @@
 			console.error('Error loading data:', err);
 		}
 	}
-	function handleGoResults(data: GoResults | null) {
-		goResults.set(data);
-		// If new results arrived, scroll the GOEA panel into view
-		if (data) {
-			setTimeout(() => {
-				document
-					.getElementById('goea-results-panel')
-					?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-			}, 100);
+	// handle download svg for sender-receiver vis
+	type DownloadableNetworkRef = { expdownloadSVG: () => Promise<void> | void };
+	let zoomRef: DownloadableNetworkRef | null = null;
+	let circularRef: DownloadableNetworkRef | null = null;
+	let hiveRef: DownloadableNetworkRef | null = null;
+	let activeTab = 'network-zoom';
+	async function downloadCurrentNetwork() {
+		if (activeTab === 'network-zoom') {
+			await zoomRef?.expdownloadSVG();
+		} else if (activeTab === 'network-circular') {
+			await circularRef?.expdownloadSVG();
+		} else if (activeTab === 'network-hive') {
+			await hiveRef?.expdownloadSVG();
+		} else {
+			console.warn('No active network visualization to download.');
 		}
 	}
 </script>
@@ -317,17 +323,33 @@
 				>
 					<ul class="nav nav-tabs" role="tablist">
 						<li class="nav-item" role="presentation">
-							<a class="nav-link active" data-bs-toggle="tab" href="#network-zoom" role="tab"
-								>Network</a
+							<a
+								class="nav-link active"
+								data-bs-toggle="tab"
+								href="#network-zoom"
+								role="tab"
+								onclick={() => (activeTab = 'network-zoom')}>Network</a
 							>
 						</li>
 						<li class="nav-item" role="presentation">
-							<a class="nav-link" data-bs-toggle="tab" href="#network-circular" role="tab"
-								>Circular</a
+							<a
+								class="nav-link"
+								data-bs-toggle="tab"
+								href="#network-circular"
+								role="tab"
+								onclick={() => (activeTab = 'network-circular')}>Circular</a
 							>
 						</li>
 						<li class="nav-item" role="presentation">
-							<a class="nav-link" data-bs-toggle="tab" href="#network-hive" role="tab">Hive</a>
+							<a
+								class="nav-link"
+								data-bs-toggle="tab"
+								href="#network-hive"
+								role="tab"
+								onclick={() => (activeTab = 'network-hive')}
+							>
+								Hive
+							</a>
 						</li>
 						<li class="nav-item dropdown">
 							<a
@@ -367,6 +389,10 @@
 									href="#drop"
 									onclick={() => ($aesSettings.groupNodes = !$aesSettings.groupNodes)}>Group TFs</a
 								>
+								<div class="dropdown-divider"></div>
+								<a class="dropdown-item" href="#drop" onclick={() => downloadCurrentNetwork()}
+									>Download SVG</a
+								>
 							</div>
 						</li>
 					</ul>
@@ -381,7 +407,7 @@
 							role="tabpanel"
 							style="flex: 1; min-height: 0; height: 100%;"
 						>
-							<NetworkGraphZoom {networkData} />
+							<NetworkGraphZoom bind:this={zoomRef} {networkData} />
 						</div>
 						<div
 							class="tab-pane fade"
@@ -389,7 +415,7 @@
 							role="tabpanel"
 							style="flex: 1; min-height: 0; height: 100%;"
 						>
-							<NetworkCircular {networkData} />
+							<NetworkCircular bind:this={circularRef} {networkData} />
 						</div>
 						<div
 							class="tab-pane fade"
@@ -398,7 +424,7 @@
 							style="flex: 1; min-height: 0; height: 100%;"
 						>
 							<!-- <p style="margin: 1rem;">Hive layout coming soon...</p> -->
-							<NetworkHive {networkData} />
+							<NetworkHive bind:this={hiveRef} {networkData} />
 						</div>
 					</div>
 				</div>

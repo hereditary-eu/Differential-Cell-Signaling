@@ -19,12 +19,43 @@
 		selectedNodeName,
 		highlightedNode,
 		aesSettings,
-		highlightedCycle
+		highlightedCycle,
+		selectedComparison,
+		sender,
+		receiver
 	} from '$lib/stores';
 	import DrawNetLegend from './drawNetLegend.svelte';
+	import { toSvg } from 'html-to-image';
 
 	export let networkData: { nodes: any[]; links: any[] };
+	let exportContainer: HTMLDivElement;
+	async function handleDownloadSVG() {
+		if (!exportContainer) return;
 
+		const dataUrl = await toSvg(exportContainer, {
+			backgroundColor: 'white',
+			cacheBust: true,
+			filter: (node) => {
+				// exclude controls/buttons if needed
+				if (
+					node instanceof HTMLElement &&
+					node.classList?.contains('no-export')
+				) {
+					return false;
+				}
+
+				return true;
+			}
+		});
+
+		const a = document.createElement('a');
+		a.href = dataUrl;
+		a.download = `${$selectedComparison}_${$sender}_${$receiver}_NetworkHive.svg`;
+		a.click();
+	}
+	export async function expdownloadSVG() {
+		await handleDownloadSVG();
+	}
 	let svgContainer: SVGSVGElement;
 	let containerDiv: HTMLDivElement;
 
@@ -110,7 +141,7 @@
 		const src = d.source;
 		const tgt =
 			d.type === 'TFL' && $aesSettings.TF === 'endShape'
-				? trimPath(d.source, d.target, 10)
+				? trimPath(d.source, d.target, 14)
 				: { x: d.target.x, y: d.target.y };
 
 		const beta = -0.18;
@@ -315,7 +346,7 @@
 	});
 </script>
 
-<div style="position: relative; width: 100%; height: 100%;">
+<div bind:this={exportContainer} style="position: relative; width: 100%; height: 100%;">
 	<DrawNetLegend />
 	<div bind:this={containerDiv} style="width: 100%; height: 100%;">
 		<svg bind:this={svgContainer} style="width: 100%; height: 100%; display: block;"></svg>
