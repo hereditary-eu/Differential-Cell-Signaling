@@ -501,6 +501,9 @@
 	<DrawNetLegend />
 	<!-- <DownloadButton {getSvgEl} /> -->
 	<div bind:this={containerDiv} style="width: 100%; height: 100%;">
-		<svg bind:this={svgContainer} style="width: 100%; height: 100%; display: block;"></svg>
+		<svg
+			bind:this={svgContainer}
+			style="width: 100%; height: 100%; display: block; background: var(--bg-white)"
+		></svg>
 	</div>
 </div>

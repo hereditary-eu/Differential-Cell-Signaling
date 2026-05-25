@@ -8,7 +8,7 @@
 		goResults
 	} from '$lib/stores';
 	import type { GoResults } from '$lib/types';
-	const backend = import.meta.env.VITE_BACKEND_URL;
+	const backend = import.meta.env.VITE_BACKEND_URL ?? '';
 	// CYCLES
 	let max_length = $state(12);
 	let loading = $state(false);

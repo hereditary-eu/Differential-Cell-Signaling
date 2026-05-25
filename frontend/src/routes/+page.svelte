@@ -23,8 +23,8 @@
 		goResults
 	} from '$lib/stores';
 	import type { GoResults } from '$lib/types';
-	const backend = import.meta.env.VITE_BACKEND_URL;
-
+	// const backend = import.meta.env.VITE_BACKEND_URL;
+	const backend = import.meta.env.VITE_BACKEND_URL ?? ''; // for deployment fallback to empty string
 	interface NetworkStats {
 		nNodes: number;
 		nLigands: number;

@@ -1,54 +1,26 @@
+.env
+.env.example
 #containers log
 *.log
 *.pid
 
-#students data
-backend/students_data.tsv
-backend/temporary.py
-
-#postrgesql + puppygraph
+#postrgesql
 data/pg-data/
-data/pgpass/
-data/pgpassp
-data/servers.json/
-data/puppygraph-data-backup/
-data/puppygraph/
-data/pg-admin-data/
-
-
-# py venv
-cellSigPyVenv/
+data/ingest_data/
 
 #backend
-**/__pycache__/*
+backend/__pycache__/
+backend/.venv/
+backend/.python-version
 **/*.pyc
 **/.vscode/
 backend/data/
 backend/schema-schema.json
-backend/working-schema.json
 backend/models.py
 
-
-**/newNetworkCircular.svelte
 #frontend has its own .gitignore
-
 **/data/
 **/*.csv
 **/tmp/
-.env
-.env.*
 **.err
 **.out
-personalREADME.txt
-
-puppygraph-data/
-puppygraph-data-backup/
-pg-data/
-
-# cluttering files
-backend/molecules.txt 
-#file for stefan
-frontend/src/routes/HeatmapBarplot.svelte 
-#still rudimental attempt
-hellooo.sql 
-#tmp backup for Peter

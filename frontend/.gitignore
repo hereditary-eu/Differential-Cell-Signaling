@@ -28,4 +28,4 @@ vite.config.ts.timestamp-*
 .prettierignore
 .prettierrc
 
-README
+README.md

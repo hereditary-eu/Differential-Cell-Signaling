@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
+	import { NetworkLens } from './NetworkLens';
 
 	export let fullNet: { nodes: any[]; links: any[]; stats?: any };
 
@@ -9,10 +10,14 @@
 	let labelSimulation: d3.Simulation<any, undefined>;
 	let metric: 'betweenness' | 'pagerank' = 'pagerank';
 	let resizeObserver: ResizeObserver;
+	let lensEnabled = false;
 
 	let svgW = 900;
 	let svgH = 380;
 	const LEGEND_COL_W = 130; //pixels width for legend
+
+	// One lens instance for the lifetime of this component
+	const lens = new NetworkLens({ radius: 80, zoom: 3.5, metric });
 
 	function buildSizeScale(nodes: any[], key: 'betweenness' | 'pagerank') {
 		const extent = d3.extent(nodes, (d) => d[key]) as [number, number];
@@ -231,7 +236,10 @@
 		const zoom = d3
 			.zoom<SVGSVGElement, unknown>()
 			.scaleExtent([0.15, 6])
-			.on('zoom', (e) => zoomLayer.attr('transform', e.transform));
+			.on('zoom', (e) => {
+				zoomLayer.attr('transform', e.transform);
+				lens.setZoomTransform(e.transform);
+			});
 		svg.call(zoom as any);
 
 		const link = zoomLayer
@@ -254,7 +262,8 @@
 			.attr('stroke', (d) => (isOutlier(d, metric) ? '#a00' : '#555'))
 			.attr('stroke-width', (d) => (isOutlier(d, metric) ? 1.2 : 0.4));
 
-		node.append('title')
+		node
+			.append('title')
 			.text(
 				(d: any) =>
 					`${d.name} (${d.celltype})\nbetweenness: ${d.betweenness?.toFixed(4) ?? 'n/a'}\npagerank: ${d.pagerank?.toFixed(4) ?? 'n/a'}`
@@ -263,7 +272,7 @@
 		const labelData = outlierNodes.map((d) => ({
 			nodeRef: d,
 			lx: d.x ?? 0,
-			ly: d.y ?? 0,
+			ly: d.y ?? 0
 		}));
 		const labels = labelLayer
 			.selectAll('text.outlier-label')
@@ -279,6 +288,15 @@
 			.attr('font-size', (d) => `${labelFontScale(d.nodeRef[metric])}px`)
 			.attr('fill-opacity', (d) => opacityScale(d.nodeRef[metric]))
 			.text((d) => d.nodeRef.name);
+
+		// LENS
+		lens.metric = metric;
+		lens.setSvgSize(W, H);
+		lens.setData(nodes, links);
+		lens.setSizeScale(sizeScale);
+		lens.setEnabled(lensEnabled);
+		lens.mount(svg, svgEl); // rebuilds DOM + attaches mouse events
+
 		simulation = d3
 			.forceSimulation(nodes)
 			.alphaDecay(0.04)
@@ -315,7 +333,7 @@
 					// d.vy -= 0.4; // to prefer labels not on top of node
 				}
 			});
-		
+
 		simulation.on('tick', () => {
 			link
 				.attr('x1', (d: any) => d.source.x)
@@ -324,11 +342,10 @@
 				.attr('y2', (d: any) => d.target.y);
 			node.attr('cx', (d: any) => d.x).attr('cy', (d: any) => d.y);
 			labelSimulation.alpha(Math.max(labelSimulation.alpha(), simulation.alpha() * 0.6));
+			lens.refreshIfActive(sizeScale);
 		});
 		labelSimulation.on('tick', () => {
-			labels
-				.attr('x', (d: any) => d.x)
-				.attr('y', (d: any) => d.y);
+			labels.attr('x', (d: any) => d.x).attr('y', (d: any) => d.y);
 		});
 		node.call(
 			d3.drag<any, any>().on('drag', (e, d) => {
@@ -343,6 +360,11 @@
 		metric = m;
 		render();
 	}
+	function toggleLens() {
+		lensEnabled = !lensEnabled;
+		lens.setEnabled(lensEnabled);
+		lensEnabled = lensEnabled;
+	}
 
 	$: if (fullNet?.nodes?.length) render();
 	onMount(() => {
@@ -352,6 +374,7 @@
 				if (width > 0 && height > 0) {
 					svgW = width;
 					svgH = height;
+					lens.setSvgSize(width, height);
 					render();
 				}
 			}
@@ -362,6 +385,7 @@
 	onDestroy(() => {
 		simulation?.stop();
 		resizeObserver?.disconnect();
+		lens.destroy();
 	});
 </script>
 
@@ -385,6 +409,34 @@
 	>
 		Betweenness
 	</button>
+
+	<span style="margin-left:auto; margin-right:6px;">
+		<button
+			onclick={toggleLens}
+			style="font-size:12px; padding:2px 9px; border-radius:4px; border:1px solid #bbb;
+				background:{lensEnabled ? '#000000' : 'transparent'};
+				color:{lensEnabled ? '#fff' : '#444'}; cursor:pointer;
+				display:flex; align-items:center; gap:4px;"
+		>
+			<!-- magnifier icon -->
+			<svg
+				width="13"
+				height="13"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2.2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<circle cx="11" cy="11" r="8" />
+				<line x1="21" y1="21" x2="16.65" y2="16.65" />
+				<line x1="11" y1="8" x2="11" y2="14" />
+				<line x1="8" y1="11" x2="14" y2="11" />
+			</svg>
+			Lens
+		</button>
+	</span>
 </div>
 
 <svg bind:this={svgEl} style="width:100%; height:100%;"></svg>

@@ -3,16 +3,16 @@
 	import { selectedCaseStudy, selectedComparison } from '$lib/stores';
 
 	let tooltips = {
-		ALS: 'Differential signalling inferred from snRNA-seq data publicly available from Pineda et al. (2024) https://doi.org/10.1016/j.cell.2024.02.031',
+		ALS: 'Differential signaling inferred from snRNA-seq data publicly available from Pineda et al. (2024) https://doi.org/10.1016/j.cell.2024.02.031',
 		C9ALS_vs_PN:
-			'Differential signalling in familial ALS ("C9ALS", i.e. carrying hexanucleotide repeat expansion on C9orf72) compared to an healthy reference ("PN", i.e. Pathologically Normal).',
+			'Differential signaling in familial ALS ("C9ALS", i.e. carrying hexanucleotide repeat expansion on C9orf72) compared to an healthy reference ("PN", i.e. Pathologically Normal).',
 		SALS_vs_PN:
-			'Differential signalling in sporadic ALS ("SALS") compared to an healthy reference ("PN", i.e. Pathologically Normal).',
+			'Differential signaling in sporadic ALS ("SALS") compared to an healthy reference ("PN", i.e. Pathologically Normal).',
 		SALS_vs_C9ALS:
-			'Differential signalling in sporadic ALS ("SALS") compared to familial ALS ("C9ALS", i.e. carrying hexanucleotide repeat expansion on C9orf72).',
-		FMD: "Differential signalling inferred from scRNA-seq data publicly available from d'Escamard et al. (2024) https://doi.org/10.1038/s44161-024-00533-w",
+			'Differential signaling in sporadic ALS ("SALS") compared to familial ALS ("C9ALS", i.e. carrying hexanucleotide repeat expansion on C9orf72).',
+		FMD: "Differential signaling inferred from scRNA-seq data publicly available from d'Escamard et al. (2024) https://doi.org/10.1038/s44161-024-00533-w",
 		Ko_vs_Wt:
-			'Differential signalling in FMD Ko mouse model, carrying Ubr4 knockout on smooth muscle cells, compared to wild type (Wt) mice.'
+			'Differential signaling in FMD Ko mouse model, carrying Ubr4 knockout on smooth muscle cells, compared to wild type (Wt) mice.'
 	};
 	onMount(() => {
 		// set default case study and comparison on initial load

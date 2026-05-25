@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query, APIRouter, UploadFile, File, Form, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Query #, APIRouter, UploadFile, File, Form, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import psycopg2
@@ -9,11 +9,12 @@ import networkx as nx
 from collections import Counter, defaultdict, deque
 import pandas as pd
 from gprofiler import GProfiler
-import shutil
-from pathlib import Path
-router = APIRouter()
+# import shutil
+# from pathlib import Path
+import os
+# router = APIRouter()
 app = FastAPI()
-app.include_router(router, prefix='/api')
+# app.include_router(router, prefix='/api')
 origins = ['http://localhost:5173', 'http://127.0.0.1:5173'] #allow frontend to connect #ATTENTION: if backend is run as 127.0.0.1, CORS error arises! so use 0.0.0.0
 app.add_middleware(
     CORSMiddleware,
@@ -25,13 +26,12 @@ app.add_middleware(
 )
 def get_db_connection():
     return psycopg2.connect(
-        dbname='diffcellsig',
-        user='postgres',
-        password='postgres',
-        host='localhost',
-        port='5436'
-        )
-
+        dbname=os.getenv('DB_NAME', 'diffcellsig'),
+        user=os.getenv('DB_USER', 'postgres'),
+        password=os.getenv('DB_PASS', 'postgres'),
+        host=os.getenv('DB_HOST', 'localhost'),
+        port=os.getenv('DB_PORT', '5432')
+    )
 def normalize_cycle(cycle: list) -> tuple:
     """Normalize a cycle to remove rotational duplicates."""
     rotations = [cycle[i:] + cycle[:i] for i in range(len(cycle))]
@@ -194,10 +194,10 @@ def precompute(comparison: str):
     G.add_nodes_from(n['id'] for n in nodes)
     G.add_edges_from((l['source'], l['target']) for l in links)
     G.add_edges_from((l['target'], l['source']) for l in links if l['type'] == 'LR') #make LRs undirected
-    # k=min(n,200) approximation for large graphs
+    # k=min(n,500) approximation for large graphs
     n_nodes = G.number_of_nodes()
     k = min(n_nodes, 500) if n_nodes > 500 else None
-    betweenness = nx.betweenness_centrality(G, k=k, normalized=True)
+    betweenness = nx.betweenness_centrality(G, k=k, normalized=True, seed = 23)
     values = list(betweenness.values())
     if len(values) >= 4:
         q1 = statistics.quantiles(values, n=4)[0]
@@ -907,6 +907,13 @@ def perform_go_enrichment(
         "results": res,
     })
 
+
+#towards deployment
+#tell fastapi to serve build/index.html for any route that is not an API endpoint
+from fastapi.staticfiles import StaticFiles
+app.mount('/', StaticFiles(directory='build', html=True), name = 'static')
+
+# ----------------------------- TO DO
 # user upload of case study
 # def run_ingestion(tmp_dir: Path, case_study_name: str, condition: str, ref_condition: str, organism: Literal['human', 'mouse'], split_complexes: bool, sanitize: bool):
 #     #split_complexes will be passed to dc.get_collectri

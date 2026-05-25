@@ -1,0 +1,23 @@
+backend/.venv
+backend/__pycache__
+backend/.python-version
+frontend/node_modules
+frontend/.svelte-kit
+frontend/build
+
+data/
+
+.git
+.gitignore
+
+README.md
+*.txt
+frontend/.env
+frontend/.env.production
+
+#additional safety
+**/__pycache__
+**/.pytest_cache
+**/.DS_Store
+**/node_modules
+**/.env

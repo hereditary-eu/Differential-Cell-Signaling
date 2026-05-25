@@ -17,7 +17,7 @@
 	let isHorizontal = $state(true);
 	let maxSteps = $state(4);
 
-	const backend = import.meta.env.VITE_BACKEND_URL;
+	const backend = import.meta.env.VITE_BACKEND_URL ?? '';
 
 	// update selectedNode and pass neighboorhoodData to detailed view
 	$effect(() => {
@@ -54,24 +54,26 @@
 		if (isSender && mt === 'receptor') return 5;
 		return -1.5;
 	}
-// 	function rankLabel(rank: number, s: string, r: string): string {
-//     const meta = [
-//       `${s} · TF`,
-//       `${s} · Ligand`,
-//       `${r} · Receptor`,
-//       `${r} · TF`,
-//       `${r} · Ligand`,
-//       `${s} · Receptor`,
-//     ];
-//     return meta[rank] ?? '';
-//   }
+	// 	function rankLabel(rank: number, s: string, r: string): string {
+	//     const meta = [
+	//       `${s} · TF`,
+	//       `${s} · Ligand`,
+	//       `${r} · Receptor`,
+	//       `${r} · TF`,
+	//       `${r} · Ligand`,
+	//       `${s} · Receptor`,
+	//     ];
+	//     return meta[rank] ?? '';
+	//   }
 	function renderTree() {
 		if (!$neighborhoodData?.nodes?.length || !$neighborhoodData?.rootId) return;
 		if ($neighborhoodData?.nodes?.length <= 1) {
 			d3.select(svgContainer).selectAll('*').remove();
-			d3.select(svgContainer).text('Searched node not found in current sender-receiver sub-graph.').attr('fill', '#000');
+			d3.select(svgContainer)
+				.text('Searched node not found in current sender-receiver sub-graph.')
+				.attr('fill', '#000');
 			return;
-		};
+		}
 
 		const W = containerDiv?.clientWidth || 600;
 		const H = containerDiv?.clientHeight || 500;
@@ -81,20 +83,19 @@
 
 		const rankToFixed = (rank: number) =>
 			isHorizontal
-			? PADDING + (rank / (numRanks-1)) * (W - PADDING * 1.5 )
-			: PADDING + (rank / (numRanks-1)) * (H - PADDING * 1.5 );
-		
+				? PADDING + (rank / (numRanks - 1)) * (W - PADDING * 1.5)
+				: PADDING + (rank / (numRanks - 1)) * (H - PADDING * 1.5);
+
 		const { nodes: dedupNodes, links: dedupLinks } = groupNodes
-	  		? deduplicateTFs($neighborhoodData.nodes, $neighborhoodData.links)
-  			: { nodes: $neighborhoodData.nodes, links: $neighborhoodData.links };
+			? deduplicateTFs($neighborhoodData.nodes, $neighborhoodData.links)
+			: { nodes: $neighborhoodData.nodes, links: $neighborhoodData.links };
 
 		// Attach fixed direction
 		const nodes = dedupNodes.map((d) => {
 			const rank = getYRank(d);
 			return isHorizontal
-				? {...d, fx: rankToFixed(getYRank(d))}
-				: {...d, fy: rankToFixed(getYRank(d))}
-			
+				? { ...d, fx: rankToFixed(getYRank(d)) }
+				: { ...d, fy: rankToFixed(getYRank(d)) };
 		});
 		const links = dedupLinks.map((d) => ({ ...d }));
 
@@ -167,10 +168,13 @@
 
 		const simulation = d3
 			.forceSimulation(nodes)
-			.force('link', d3.forceLink(simLinks).id((d: any) => d.id) )
+			.force(
+				'link',
+				d3.forceLink(simLinks).id((d: any) => d.id)
+			)
 			.force('charge', d3.forceManyBody().strength(-80).distanceMax(50))
 			.force('x', isHorizontal ? d3.forceX(W / 2).strength(0) : d3.forceX(W / 2).strength(0.1))
-			.force('y', isHorizontal ? d3.forceY(H / 2).strength(0.1) : null as any)
+			.force('y', isHorizontal ? d3.forceY(H / 2).strength(0.1) : (null as any))
 			.force('collide', d3.forceCollide(15));
 
 		const linkSel = zoomLayer
@@ -199,7 +203,7 @@
 			.append('text')
 			.attr('text-anchor', isHorizontal ? 'end' : 'middle')
 			.attr('dx', isHorizontal ? '-0.8em' : '0em')
-			.attr('dy', isHorizontal ? '-0.4em' : '2em') 
+			.attr('dy', isHorizontal ? '-0.4em' : '2em')
 			.attr('font-size', '9px')
 			.attr('color', '#000000')
 			.attr('stroke', '#000000')
@@ -257,8 +261,8 @@
 				.attr('x1', (d: any) => d.source.x)
 				.attr('y1', (d: any) => d.source.y)
 				.attr('x2', (d: any) => {
-            		if (d.type === 'TFL') return trimPath(d.source, d.target, 9).x;
-            		return d.target.x;
+					if (d.type === 'TFL') return trimPath(d.source, d.target, 9).x;
+					return d.target.x;
 				})
 				.attr('y2', (d: any) => {
 					if (d.type === 'TFL') return trimPath(d.source, d.target, 9).y;
@@ -279,11 +283,16 @@
 		});
 	}
 
-	$effect(() => { if ($neighborhoodData || maxSteps || groupNodes !== undefined) renderTree(); });
+	$effect(() => {
+		if ($neighborhoodData || maxSteps || groupNodes !== undefined) renderTree();
+	});
 </script>
 
-<div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden;">
-	<div style="
+<div
+	style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden;"
+>
+	<div
+		style="
 		display: flex;
 		align-items: center;
 		// justify-content: flex-end;
@@ -293,11 +302,16 @@
 		border-bottom: 1px solid #e5e5e5;
 		background: white;
 		z-index: 10;
-	">
-		<p style="font-size: 12px; margin: 0; margin-right: auto; white-space: nowrap; font-weight: 500; text-align: left;">
+	"
+	>
+		<p
+			style="font-size: 12px; margin: 0; margin-right: auto; white-space: nowrap; font-weight: 500; text-align: left;"
+		>
 			{#if $selectedNodeName}{$selectedNodeName} Neighborhood{:else}Neighborhood View{/if}
 		</p>
-		<label for="input-maxSteps" style="font-size: 11px; margin: 0; white-space: nowrap;">max steps:</label>
+		<label for="input-maxSteps" style="font-size: 11px; margin: 0; white-space: nowrap;"
+			>max steps:</label
+		>
 		<input
 			id="input-maxSteps"
 			type="number"
@@ -313,7 +327,9 @@
 			"
 		/>
 		<button
-			onclick={() => { isHorizontal = !isHorizontal; }}
+			onclick={() => {
+				isHorizontal = !isHorizontal;
+			}}
 			style="
 				padding: 2px 8px;
 				font-size: 11px;
@@ -328,21 +344,34 @@
 			title="Toggle layout orientation"
 		>
 			{#if isHorizontal}
-				<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
-					<line x1="7" y1="1" x2="7" y2="13"/>
-					<line x1="3" y1="4" x2="7" y2="1"/><line x1="11" y1="4" x2="7" y2="1"/>
+				<svg
+					width="14"
+					height="14"
+					viewBox="0 0 14 14"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.5"
+				>
+					<line x1="7" y1="1" x2="7" y2="13" />
+					<line x1="3" y1="4" x2="7" y2="1" /><line x1="11" y1="4" x2="7" y2="1" />
 				</svg>
 				Vertical
 			{:else}
-				<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
-					<line x1="1" y1="7" x2="13" y2="7"/>
-					<line x1="10" y1="3" x2="13" y2="7"/><line x1="10" y1="11" x2="13" y2="7"/>
+				<svg
+					width="14"
+					height="14"
+					viewBox="0 0 14 14"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.5"
+				>
+					<line x1="1" y1="7" x2="13" y2="7" />
+					<line x1="10" y1="3" x2="13" y2="7" /><line x1="10" y1="11" x2="13" y2="7" />
 				</svg>
 				Horizontal
 			{/if}
 		</button>
 		<GroupToggle bind:checked={groupNodes} label="Group TFs" />
-
 	</div>
 	<div bind:this={containerDiv} style="flex: 1; min-height: 0; width: 100%;">
 		<svg bind:this={svgContainer} style="width: 100%; height: 100%; display: block;"></svg>
