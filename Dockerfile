@@ -1,5 +1,8 @@
-# Build the Svelte frontend 
+# Build the Svelte frontend
 FROM node:22-bookworm-slim AS frontend-build
+
+ARG BASE_PATH=/differential-cell-signaling
+ENV BASE_PATH=${BASE_PATH}
 
 WORKDIR /frontend
 COPY frontend/package*.json ./
