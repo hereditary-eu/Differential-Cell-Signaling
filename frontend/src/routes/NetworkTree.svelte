@@ -20,7 +20,8 @@
 	let isHorizontal = $state(true);
 	let maxSteps = $state(4);
 
-	const backend = import.meta.env.VITE_BACKEND_URL ?? '';
+	import { base } from '$app/paths';
+	const backend = import.meta.env.VITE_BACKEND_URL ?? base;
 
 	function handleDownloadSVG() {
 		downloadSVG(

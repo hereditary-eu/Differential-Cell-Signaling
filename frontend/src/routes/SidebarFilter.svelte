@@ -9,7 +9,8 @@
 		filteringQueryStr
 	} from '$lib/stores';
 
-	const backend = import.meta.env.VITE_BACKEND_URL ?? '';
+	import { base } from '$app/paths';
+	const backend = import.meta.env.VITE_BACKEND_URL ?? base;
 
 	const {
 		loadFilteredData

@@ -22,7 +22,8 @@
 		goResults
 	} from '$lib/stores';
 
-	const backend = import.meta.env.VITE_BACKEND_URL ?? ''; // for deployment fallback to empty string
+	import { base } from '$app/paths';
+	const backend = import.meta.env.VITE_BACKEND_URL ?? base;
 
 	interface NetworkStats {
 		nNodes: number;
