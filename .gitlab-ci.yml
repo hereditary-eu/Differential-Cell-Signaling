@@ -1,50 +1,49 @@
 default:
-image: docker:29-cli
-before_script:
-- echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
-tags:
-- docker
+  image: docker:29-cli
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+  tags:
+    - docker
 
 stages:
-    build
-    test
-    release
-    deploy
-
+  - build
+  - test
+  - release
+  - deploy
 
 variables:
-DOCKER_API_VERSION: "1.44"
-DOCKER_DRIVER: overlay2
-DOCKER_HOST: "unix:///var/run/docker.sock"
-DOCKER_BUILDKIT: "1"
-APP_IMAGE_BRANCH: "$CI_REGISTRY_IMAGE:app_$CI_COMMIT_REF_SLUG"
-APP_IMAGE_SHA: "$CI_REGISTRY_IMAGE:app_$CI_COMMIT_SHORT_SHA"
-DB_IMAGE_BRANCH: "$CI_REGISTRY_IMAGE:db_$CI_COMMIT_REF_SLUG"
-DB_IMAGE_SHA: "$CI_REGISTRY_IMAGE:db_$CI_COMMIT_SHORT_SHA"
+  DOCKER_API_VERSION: "1.44"
+  DOCKER_DRIVER: overlay2
+  DOCKER_HOST: "unix:///var/run/docker.sock"
+  DOCKER_BUILDKIT: "1"
+  APP_IMAGE_BRANCH: "$CI_REGISTRY_IMAGE:app_$CI_COMMIT_REF_SLUG"
+  APP_IMAGE_SHA: "$CI_REGISTRY_IMAGE:app_$CI_COMMIT_SHORT_SHA"
+  DB_IMAGE_BRANCH: "$CI_REGISTRY_IMAGE:db_$CI_COMMIT_REF_SLUG"
+  DB_IMAGE_SHA: "$CI_REGISTRY_IMAGE:db_$CI_COMMIT_SHORT_SHA"
 
 build-app:
-stage: build
-script:
-- docker pull "$APP_IMAGE_BRANCH" || true
-- docker build --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from "$APP_IMAGE_BRANCH" --pull -t "$APP_IMAGE_BRANCH" -t "$APP_IMAGE_SHA" .
-- docker push "$APP_IMAGE_BRANCH"
-- docker push "$APP_IMAGE_SHA"
+  stage: build
+  script:
+    - docker pull "$APP_IMAGE_BRANCH" || true
+    - docker build --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from "$APP_IMAGE_BRANCH" --pull -t "$APP_IMAGE_BRANCH" -t "$APP_IMAGE_SHA" .
+    - docker push "$APP_IMAGE_BRANCH"
+    - docker push "$APP_IMAGE_SHA"
 
 release-main:
-stage: release
-needs:
-- build-app
-script:
-- docker pull "$APP_IMAGE_BRANCH"
-- docker tag "$APP_IMAGE_BRANCH" "$CI_REGISTRY_IMAGE:latest"
-- docker push "$CI_REGISTRY_IMAGE:latest"
-- |
-  if docker manifest inspect "$DB_IMAGE_BRANCH" >/dev/null 2>&1; then
-  docker pull "$DB_IMAGE_BRANCH"
-  docker tag "$DB_IMAGE_BRANCH" "$CI_REGISTRY_IMAGE:db_latest"
-  docker push "$CI_REGISTRY_IMAGE:db_latest"
-  else
-  echo "DB image not built; skipping db_latest tag"
-  fi
+  stage: release
+  needs:
+    - build-app
+  script:
+    - docker pull "$APP_IMAGE_BRANCH"
+    - docker tag "$APP_IMAGE_BRANCH" "$CI_REGISTRY_IMAGE:latest"
+    - docker push "$CI_REGISTRY_IMAGE:latest"
+    - |
+      if docker manifest inspect "$DB_IMAGE_BRANCH" >/dev/null 2>&1; then
+        docker pull "$DB_IMAGE_BRANCH"
+        docker tag "$DB_IMAGE_BRANCH" "$CI_REGISTRY_IMAGE:db_latest"
+        docker push "$CI_REGISTRY_IMAGE:db_latest"
+      else
+        echo "DB image not built; skipping db_latest tag"
+      fi
   rules:
-  - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
