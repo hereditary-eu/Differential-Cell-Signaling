@@ -1,9 +1,9 @@
 default:
-  image: docker:29-cli
+  image: docker:29.0
+  services:
+    - docker:29.0-dind
   before_script:
-    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
-  tags:
-    - docker
+    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
 
 stages:
   - build
@@ -12,10 +12,9 @@ stages:
   - deploy
 
 variables:
-  DOCKER_API_VERSION: "1.44"
+  DOCKER_HOST: tcp://docker:2375
   DOCKER_DRIVER: overlay2
-  DOCKER_HOST: "unix:///var/run/docker.sock"
-  DOCKER_BUILDKIT: "1"
+  DOCKER_TLS_CERTDIR: ""
   APP_IMAGE_BRANCH: "$CI_REGISTRY_IMAGE:app_$CI_COMMIT_REF_SLUG"
   APP_IMAGE_SHA: "$CI_REGISTRY_IMAGE:app_$CI_COMMIT_SHORT_SHA"
   DB_IMAGE_BRANCH: "$CI_REGISTRY_IMAGE:db_$CI_COMMIT_REF_SLUG"
