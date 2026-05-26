@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
-	import { sender, receiver, reverseSig } from '$lib/stores';
+	import { sender, receiver, reverseSig, selectedComparison } from '$lib/stores';
+	import { downloadSVG } from './downloadSVG';
 
 	type LRDatum = { sender: string; receiver: string; count: number };
 	let lrCells: d3.Selection<SVGRectElement, LRDatum, SVGGElement, unknown> | undefined;
@@ -22,7 +23,7 @@
 			rtf_heatmap: { data: Record<string, number> };
 		};
 	};
-
+	
 	let containerEl: HTMLDivElement;
 	let lrSvgEl: SVGSVGElement;
 	let tfSvgEl: SVGSVGElement;
@@ -310,6 +311,46 @@
 		drawLRHeatmap(containerH - GAP);
 		drawTFHeatmap(containerH - GAP);
 	}
+	function handleDownloadSVG() {
+		if (!lrSvgEl || !tfSvgEl) return;
+
+		const gap = 15;
+		const lrW = Number(lrSvgEl.getAttribute('width') ?? 0);
+		const lrH = Number(lrSvgEl.getAttribute('height') ?? 0);
+		const tfW = Number(tfSvgEl.getAttribute('width') ?? 0);
+		const tfH = Number(tfSvgEl.getAttribute('height') ?? 0);
+
+		const width = Math.max(lrW, tfW);
+		const height = lrH + gap + tfH +7;
+
+		// Build a temporary off-DOM SVG that stacks both charts
+		const ns = 'http://www.w3.org/2000/svg';
+		const composite = document.createElementNS(ns, 'svg');
+		composite.setAttribute('xmlns', ns);
+		composite.setAttribute('width', String(width));
+		composite.setAttribute('height', String(height));
+		composite.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+		const lrClone = lrSvgEl.cloneNode(true) as SVGSVGElement;
+		const tfClone = tfSvgEl.cloneNode(true) as SVGSVGElement;
+
+		// Wrap clones in groups to position them
+		const g1 = document.createElementNS(ns, 'g');
+		g1.setAttribute('transform', 'translate(0,4)');
+		const g2 = document.createElementNS(ns, 'g');
+		g2.setAttribute('transform', `translate(0,${lrH + gap})`);
+
+		// Use children of the cloned SVGs so we don't nest <svg> inside <svg>
+		while (lrClone.firstChild) g1.appendChild(lrClone.firstChild);
+		while (tfClone.firstChild) g2.appendChild(tfClone.firstChild);
+
+		composite.appendChild(g1);
+		composite.appendChild(g2);
+
+		const filename = `${$selectedComparison}_OverviewVis.svg`;
+		downloadSVG(composite, filename);
+	}
+
 
 	$: if (fullNet?.celltypes?.length) drawAll();
 	$: if (lrCells) {	
@@ -357,10 +398,26 @@
 	onDestroy(() => resizeObserver?.disconnect());
 </script>
 
-<div
-	bind:this={containerEl}
-	style="display:flex; flex-direction:column; align-items:center; gap:0; width:100%; height:100%; padding:0.5rem 0; overflow:hidden;"
->
-	<svg bind:this={lrSvgEl}></svg>
-	<svg bind:this={tfSvgEl}></svg>
+
+
+<div class="card border-primary mb-3" style="width: 39%; height: 60dvh; display: flex; flex-direction: column;">
+	<div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+		<span>Overview</span>
+		<button
+			onclick={handleDownloadSVG}
+			style="font-size:12px; padding:2px 9px; 
+					background:transparent; color:#444;
+					border-radius:4px; border:1px solid #bbb;
+					cursor:pointer;
+					display:flex; align-items:center; gap:4px; margin-right:6px; ">Download SVG</button
+		>
+	</div>
+	<div style="flex: 1; min-height: 0; overflow-y: auto">
+		<div bind:this={containerEl}
+		style="display:flex; flex-direction:column; align-items:center; gap:0; width:100%; height:100%; padding:0.5rem 0; overflow:hidden;"
+		>
+		<svg bind:this={lrSvgEl}></svg>
+		<svg bind:this={tfSvgEl}></svg>
+		</div>
+	</div>
 </div>

@@ -3,7 +3,7 @@
 	import * as d3 from 'd3';
 	import { NetworkLens } from './NetworkLens';
 	import { downloadSVG } from './downloadSVG';
-	import { selectedComparison } from '$lib/stores';
+	import { selectedComparison, selectedCaseStudy } from '$lib/stores';
 	export let fullNet: { nodes: any[]; links: any[]; stats?: any };
 
 	let svgEl: SVGSVGElement;
@@ -52,6 +52,14 @@
 		const halfW = colW * 0.3;
 		const g = svg.append('g').attr('transform', `translate(14, 0)`);
 		const fontSize = Math.max(10, Math.min(14, H * 0.036));
+
+		g.append('text')
+			.attr('x', 0)
+			.attr('y', fontSize)
+			.attr('font-size', `${fontSize}px`)
+			.attr('font-weight', '600')
+			.attr('fill', '#333')
+			.text(`${metric === 'betweenness' ? 'Betweenness' : 'PageRank'}`);
 		// outlier legend dot
 		const dotY = fontSize + 12;
 		g.append('circle').attr('cx', 5).attr('cy', dotY).attr('r', 4).attr('fill', '#e03333');
@@ -392,62 +400,68 @@
 	});
 </script>
 
-<div
-	style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; margin-left: 4px; margin-top: 3px; "
->
-	<span style="font-size: 12px; color: #666; margin-left: 4px;">Metric:</span>
-	<button
-		style="font-size: 12px; padding: 2px 10px; border-radius: 4px; border: 1px solid #bbb;
-			background: {metric === 'pagerank' ? '#e03333' : 'transparent'};
-			color: {metric === 'pagerank' ? '#fff' : 'inherit'}; cursor: pointer;"
-		onclick={() => switchMetric('pagerank')}
-	>
-		PageRank
-	</button>
-	<button
-		style="font-size: 12px; padding: 2px 10px; border-radius: 4px; border: 1px solid #bbb;
-			background: {metric === 'betweenness' ? '#e03333' : 'transparent'};
-			color: {metric === 'betweenness' ? '#fff' : 'inherit'}; cursor: pointer;"
-		onclick={() => switchMetric('betweenness')}
-	>
-		Betweenness
-	</button>
 
-	<span style="margin-left:auto; margin-right:6px;">
-		<button
-			onclick={toggleLens}
-			style="font-size:12px; padding:2px 9px; border-radius:4px; border:1px solid #bbb;
-				background:{lensEnabled ? '#000000' : 'transparent'};
-				color:{lensEnabled ? '#fff' : '#444'}; cursor:pointer;
-				display:flex; gap:4px;"
-		>
-			<!-- magnifier icon -->
-			<svg
-				width="13"
-				height="13"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2.2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			>
-				<circle cx="11" cy="11" r="8" />
-				<line x1="21" y1="21" x2="16.65" y2="16.65" />
-				<line x1="11" y1="8" x2="11" y2="14" />
-				<line x1="8" y1="11" x2="14" y2="11" />
-			</svg>
-			Lens
-		</button>
-	</span>
-	<button
-		onclick={handleDownloadSVG}
-		style="font-size:12px; padding:2px 9px; 
-				background:'transparent'; color:'#444';
-				border-radius:4px; border:1px solid #bbb;
-				cursor:pointer;
-				display:flex; gap:4px; margin-right:6px; ">Download SVG</button
-	>
+<div class="card border-primary mb-3" style="width: 60%; height: 60dvh; display: flex; flex-direction: column;">
+	<div class="card-header" style="display:flex; align-items:center; gap:8px;">
+		<span>Full Network for {$selectedCaseStudy} : {$selectedComparison}</span>
+		<div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+				<span style="font-size: 12px; color: #666; margin-left: 4px;">Metric:</span>
+				<button
+					style="font-size: 12px; padding: 2px 10px; border-radius: 4px; border: 1px solid #bbb;
+						background: {metric === 'pagerank' ? '#e03333' : 'transparent'};
+						color: {metric === 'pagerank' ? '#fff' : 'inherit'}; cursor: pointer;"
+					onclick={() => switchMetric('pagerank')}
+				>
+					PageRank
+				</button>
+				<button
+					style="font-size: 12px; padding: 2px 10px; border-radius: 4px; border: 1px solid #bbb;
+						background: {metric === 'betweenness' ? '#e03333' : 'transparent'};
+						color: {metric === 'betweenness' ? '#fff' : 'inherit'}; cursor: pointer;"
+					onclick={() => switchMetric('betweenness')}
+				>
+					Betweenness
+				</button>
+			<span style="margin-left: auto; margin-right: 6px;">
+				<button
+				onclick={toggleLens}
+				style="font-size: 12px; padding: 2px 9px; border-radius: 4px; border: 1px solid #bbb;
+					background: {lensEnabled ? '#000000' : 'transparent'};
+					color: {lensEnabled ? '#fff' : '#444'}; cursor: pointer;
+					display: flex; gap: 4px; align-items: center; line-height: 1;"
+				>
+				<!-- magnifier icon -->
+				<svg
+					width="13"
+					height="13"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2.2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					style="display: block;"
+				>
+					<circle cx="11" cy="11" r="8" />
+					<line x1="21" y1="21" x2="16.65" y2="16.65" />
+					<line x1="11" y1="8" x2="11" y2="14" />
+					<line x1="8" y1="11" x2="14" y2="11" />
+				</svg>
+				Lens
+				</button>
+			</span>
+			<button onclick={handleDownloadSVG}
+				style="font-size:12px; padding:2px 9px; 
+						background:transparent; color:#444;
+						border-radius:4px; border:1px solid #bbb;
+						cursor:pointer;
+						display:flex; gap:4px; margin-right:6px; "
+						>Download SVG
+			</button>
+		</div>
+	</div>
+
+	<div class="card-body" style="flex: 1; min-height: 0; padding: 0.5rem;">
+		<svg bind:this={svgEl} style="width:100%; height:100%;"></svg>
+	</div>
 </div>
-
-<svg bind:this={svgEl} style="width:100%; height:100%;"></svg>

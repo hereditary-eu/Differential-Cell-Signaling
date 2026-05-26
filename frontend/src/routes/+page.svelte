@@ -15,7 +15,6 @@
 		celltypes,
 		sender,
 		receiver,
-		selectedCaseStudy,
 		selectedComparison,
 		selectedNode,
 		selectedNodeName,
@@ -245,6 +244,7 @@
 			</div>
 		</aside>
 		<main class="flex-grow-1 p-4" id="graph-area">
+			<!-- marker definitions -->
 			<svg width="0" height="0" style="position:absolute; pointer-events:none;">
 				<defs>
 					<marker
@@ -295,28 +295,12 @@
 			</svg>
 			<div style="display: flex; align-items: flex-start; gap: 1%; width: 100%;">
 				<!-- full net -->
-				<div
-					class="card border-primary mb-3"
-					style="width: 60%; height: 60dvh; display: flex; flex-direction: column;"
-				>
-					<p class="card-header">Full Network for {$selectedCaseStudy} : {$selectedComparison}</p>
-					<div style="flex: 1; min-height: 0; overflow-y: hidden;">
-						<FullNetwork {fullNet} />
-					</div>
-				</div>
+				<FullNetwork {fullNet} />
 				<!-- overview -->
-				<div
-					class="card border-primary mb-3"
-					style="width: 39%; height: 60dvh; display: flex; flex-direction: column;"
-				>
-					<p class="card-header">Overview</p>
-					<div style="flex: 1; min-height: 0; overflow-y: auto">
-						<VisSeparateOverview fullNet={fullNet as any} />
-					</div>
-				</div>
+				<VisSeparateOverview fullNet={fullNet as any} />
 			</div>
-			<!-- filtered sender-receiver net -->
-			<div style="display: flex; align-items: stretch; gap: 1%; width: 100%; height: 60dvh;">
+			<div style="display: flex; align-items: stretch; gap: 1%; width: 100%; height: 60dvh;">			
+				<!-- filtered sender-receiver net -->
 				<div
 					class="card border-primary mb-3"
 					style="width: 50%; height: 100%; display: flex; flex-direction: column; min-height: 0;"
@@ -423,26 +407,12 @@
 							role="tabpanel"
 							style="flex: 1; min-height: 0; height: 100%;"
 						>
-							<!-- <p style="margin: 1rem;">Hive layout coming soon...</p> -->
 							<NetworkHive bind:this={hiveRef} {networkData} />
 						</div>
 					</div>
 				</div>
-				<div
-					class="card border-primary mb-3"
-					style="width: 49%; height: 100%; display: flex; flex-direction: column; min-height: 0;"
-				>
-					<!-- <p class="card-header">
-						{#if $selectedNodeName}Detailed Tree for {$selectedNodeName}{:else}Detailed Tree{/if}
-        			</p> -->
-					<div style="flex: 1; min-height: 0;">
-						{#if $selectedNodeName}
-							<NetworkTree />
-						{:else}
-							<p style="margin: 1rem; color: #888;">Select a node to see its tree.</p>
-						{/if}
-					</div>
-				</div>
+				<!-- Detailed Tree -->
+				<NetworkTree />
 			</div>
 			<br />
 			{#if $goResults}
