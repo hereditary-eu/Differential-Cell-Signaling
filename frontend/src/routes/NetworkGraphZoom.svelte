@@ -242,7 +242,7 @@
 				let endX = d.target.x;
 				let endY = d.target.y;
 				if (d.type === 'TFL' && $aesSettings.TF === 'endShape') {
-					const trimmed = trimPath(d.source, d.target, 10);
+					const trimmed = trimPath(d.source, d.target, 14);
 					endX = trimmed.x;
 					endY = trimmed.y;
 				}
