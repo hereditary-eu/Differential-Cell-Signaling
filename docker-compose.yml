@@ -15,23 +15,24 @@ services:
       - ./data/pg-data:/var/lib/postgresql/data
       - ./data/ingest_data:/ingest_data
   app:
-      build:
-        context: .
-        dockerfile: Dockerfile
-      restart: always
-      environment:
-        - DB_HOST=db
-        - DB_PORT=5432
-        - DB_NAME=${DB_NAME}
-        - DB_USER=${DB_USER}
-        - DB_PASS=${DB_PASS}
-        - DATA_DIR=/app/data
-      ports:
-        - "8000:8000"
-      depends_on:
-        - db
-      volumes:
-        - ./data:/app/data
+    image: registry.gitlab.tugraz.at/hereditary/all-in-on-eeg:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - DATA_DIR=/app/data
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    volumes:
+      - ./data:/app/data
 
 volumes:
   pg-data:
