@@ -1,7 +1,7 @@
 #version: "3" #this gives obsolete warning
 services:
-  db:
-    build: ./pg-vec-geo
+  diffcellsig-db:
+    image: postgres:17
     restart: always
     env_file:
       - .env
@@ -14,8 +14,11 @@ services:
     volumes:
       - ./data/pg-data:/var/lib/postgresql/data
       - ./data/ingest_data:/ingest_data
-  app:
-    image: registry.gitlab.tugraz.at/hereditary/all-in-on-eeg:latest
+    networks:
+      - web
+
+  diffcellsig-app:
+    image: registry.gitlab.tugraz.at/hereditary/diffcellsig:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -27,13 +30,35 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASS=${DB_PASS}
       - DATA_DIR=/app/data
-    ports:
-      - "8000:8000"
+    # ports:
+    #   - "8000:8000"
     depends_on:
-      - db
+      - diffcellsig-db
     volumes:
       - ./data:/app/data
+    networks:
+      - web
+    labels:
+      # Traefik configuration, Hostname needs to be changed
+      - traefik.http.routers.diffcellsig-http.rule=Host(`hereditary.cgv.tugraz.at`) && PathPrefix(`/differential-cell-signaling/`)
+      - traefik.http.routers.diffcellsig-http.entrypoints=http
+      - traefik.http.routers.diffcellsig-https.rule=Host(`hereditary.cgv.tugraz.at`) && PathPrefix(`/differential-cell-signaling/`)
+      - traefik.http.routers.diffcellsig-https.entrypoints=https
+
+      - traefik.http.routers.diffcellsig-https.tls=true
+      - traefik.http.routers.diffcellsig-https.tls.certresolver=letsencrypt
+
+      - "traefik.http.routers.diffcellsig-http.middlewares=redirect,diffcellsig_sp@docker"
+      - "traefik.http.routers.diffcellsig-https.middlewares=redirect,diffcellsig_sp@docker"
+      - "traefik.http.middlewares.diffcellsig_sp.stripprefix.prefixes=/differential-cell-signaling"
+      - "traefik.http.middlewares.diffcellsig_sp.stripprefix.forceSlash=false"
+      - traefik.http.middlewares.redirect.redirectscheme.scheme=https
+      - traefik.http.services.diffcellsig.loadbalancer.server.port=8000
 
 volumes:
   pg-data:
     external: false
+
+networks:
+  web:
+    external: true
