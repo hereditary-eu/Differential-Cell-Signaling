@@ -4,7 +4,7 @@ Interactive visual analytics framework for the exploration of differential cell-
 
 The dashboard integrates intercellular communication, intracellular signaling cascades, TF regulation, and functional enrichment analysis into a unified multi-layer network representation supporting the identification of candidate disease drivers, altered signaling loops, and dysregulated regulatory programs.
 
-Live application: XXXURLXXX
+[Live application](https://hereditary.cgv.tugraz.at/differential-cell-signaling/)
 
 ---
 
