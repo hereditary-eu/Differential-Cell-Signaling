@@ -25,36 +25,42 @@
 		receiver
 	} from '$lib/stores';
 	import DrawNetLegend from './drawNetLegend.svelte';
-	import { toSvg } from 'html-to-image';
+	import { toSvg, toPng } from 'html-to-image';
 
 	export let networkData: { nodes: any[]; links: any[] };
 	let exportContainer: HTMLDivElement;
-	async function handleDownloadSVG() {
+
+	async function handleDownload(format: 'svg' | 'png') {
 		if (!exportContainer) return;
 
-		const dataUrl = await toSvg(exportContainer, {
+		const opts = {
 			backgroundColor: 'white',
 			cacheBust: true,
-			filter: (node) => {
-				// exclude controls/buttons if needed
-				if (
-					node instanceof HTMLElement &&
-					node.classList?.contains('no-export')
-				) {
-					return false;
-				}
-
+			pixelRatio: 2,
+			filter: (node: Node) => {
+				if (node instanceof HTMLElement && node.classList?.contains('no-export')) return false;
 				return true;
 			}
-		});
+		};
+
+		const baseName = `${$selectedComparison}_${$sender}_${$receiver}_NetworkHive`;
+
+		const dataUrl = format === 'svg'
+			? await toSvg(exportContainer, opts)
+			: await toPng(exportContainer, opts);
 
 		const a = document.createElement('a');
 		a.href = dataUrl;
-		a.download = `${$selectedComparison}_${$sender}_${$receiver}_NetworkHive.svg`;
+		a.download = `${baseName}.${format}`;
 		a.click();
 	}
+
 	export async function expdownloadSVG() {
-		await handleDownloadSVG();
+		await handleDownload('svg');
+	}
+
+	export async function expdownloadPNG() {
+		await handleDownload('png');
 	}
 	let svgContainer: SVGSVGElement;
 	let containerDiv: HTMLDivElement;
@@ -141,7 +147,7 @@
 		const src = d.source;
 		const tgt =
 			d.type === 'TFL' && $aesSettings.TF === 'endShape'
-				? trimPath(d.source, d.target, 14)
+				? trimPath(d.source, d.target, 17)
 				: { x: d.target.x, y: d.target.y };
 
 		const beta = -0.18;

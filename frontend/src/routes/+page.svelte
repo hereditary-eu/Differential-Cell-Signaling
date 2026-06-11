@@ -99,20 +99,18 @@
 		}
 	}
 	// handle download svg for sender-receiver vis
-	type DownloadableNetworkRef = { expdownloadSVG: () => Promise<void> | void };
+	type DownloadableNetworkRef = { expdownloadSVG: () => Promise<void> | void, expdownloadPNG: () => Promise<void> | void };
 	let zoomRef: DownloadableNetworkRef | null = null;
 	let circularRef: DownloadableNetworkRef | null = null;
 	let hiveRef: DownloadableNetworkRef | null = null;
 	let activeTab = 'network-zoom';
-	async function downloadCurrentNetwork() {
+	function downloadCurrentNetwork(format: 'svg' | 'png') {
 		if (activeTab === 'network-zoom') {
-			await zoomRef?.expdownloadSVG();
+			format === 'svg' ? zoomRef?.expdownloadSVG() : zoomRef?.expdownloadPNG();
 		} else if (activeTab === 'network-circular') {
-			await circularRef?.expdownloadSVG();
+			format === 'svg' ? circularRef?.expdownloadSVG() : circularRef?.expdownloadPNG();
 		} else if (activeTab === 'network-hive') {
-			await hiveRef?.expdownloadSVG();
-		} else {
-			console.warn('No active network visualization to download.');
+			format === 'svg' ? hiveRef?.expdownloadSVG() : hiveRef?.expdownloadPNG();
 		}
 	}
 </script>
@@ -375,8 +373,11 @@
 									onclick={() => ($aesSettings.groupNodes = !$aesSettings.groupNodes)}>Group TFs</a
 								>
 								<div class="dropdown-divider"></div>
-								<a class="dropdown-item" href="#drop" onclick={() => downloadCurrentNetwork()}
+								<a class="dropdown-item" href="#drop" onclick={() => downloadCurrentNetwork('svg')}
 									>Download SVG</a
+								>
+								<a class="dropdown-item" href="#drop" onclick={() => downloadCurrentNetwork('png')}
+									>Download PNG</a
 								>
 							</div>
 						</li>

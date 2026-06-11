@@ -26,37 +26,43 @@
 		updateNodeColors
 	} from './utils';
 	import DrawNetLegend from './drawNetLegend.svelte';
-	import { toSvg } from 'html-to-image';
+	import { toSvg, toPng } from 'html-to-image';
 
 	export let networkData: { nodes: any[]; links: any[] };
 	let exportContainer: HTMLDivElement;
-	async function handleDownloadSVG() {
+	async function handleDownload(format: 'svg' | 'png') {
 		if (!exportContainer) return;
 
-		const dataUrl = await toSvg(exportContainer, {
+		const opts = {
 			backgroundColor: 'white',
 			cacheBust: true,
-			filter: (node) => {
-				// exclude controls/buttons if needed
-				if (
-					node instanceof HTMLElement &&
-					node.classList?.contains('no-export')
-				) {
-					return false;
-				}
-
+			pixelRatio: 2,
+			filter: (node: Node) => {
+				if (node instanceof HTMLElement && node.classList?.contains('no-export')) return false;
 				return true;
 			}
-		});
+		};
+
+		const baseName = `${$selectedComparison}_${$sender}_${$receiver}_NetworkCircular`;
+
+		const dataUrl = format === 'svg'
+			? await toSvg(exportContainer, opts)
+			: await toPng(exportContainer, opts);
 
 		const a = document.createElement('a');
 		a.href = dataUrl;
-		a.download = `${$selectedComparison}_${$sender}_${$receiver}_NetworkCircular.svg`;
+		a.download = `${baseName}.${format}`;
 		a.click();
 	}
+
 	export async function expdownloadSVG() {
-		await handleDownloadSVG();
+		await handleDownload('svg');
 	}
+
+	export async function expdownloadPNG() {
+		await handleDownload('png');
+	}
+	
 	let svgContainer: SVGSVGElement;
 	let simulation: d3.Simulation<any, undefined>;
 	let containerDiv: HTMLDivElement;
