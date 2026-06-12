@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { highlightedNode, selectedNode, selectedNodeName, filteringQueryStr } from '$lib/stores';
 
-	const backend = import.meta.env.VITE_BACKEND_URL ?? '';
+	import { base } from '$app/paths';
+	const backend = import.meta.env.VITE_BACKEND_URL ?? base;
 
 	let query = $state('');
 	let suggestions: { id: string; verbose_id: string; name: string; celltype: string }[] = $state(

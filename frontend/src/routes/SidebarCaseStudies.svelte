@@ -178,7 +178,7 @@
 			value="upload"
 			disabled
 		/>
-		<label class="form-check-label" for="upload">Upload your own data</label>
+		<label for="upload" class="form-check-label">Upload your own data</label>
 	</div>
 	<hr />
 	<!-- reactive comparisons availble -->

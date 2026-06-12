@@ -6,7 +6,7 @@ The dashboard integrates intercellular communication, intracellular signaling ca
 
 [Live application](https://hereditary.cgv.tugraz.at/differential-cell-signaling/)
 
-# Graphical Abstract
+## Graphical Abstract
 
 ![Graphical Abstract](./demo/VCBM26_teaser_v2.png)
 

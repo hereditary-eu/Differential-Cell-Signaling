@@ -143,6 +143,7 @@
 	<div class="flex items-center gap-2">
 		{#if $sender === '' || $receiver === ''}
 			<input id="reverse-sig" type="checkbox" disabled />
+			<label for="reverse-sig">Include reverse signaling</label>
 		{:else}
 			<input id="reverse-sig" type="checkbox" bind:checked={$reverseSig} />
 			<label for="reverse-sig">Include reverse signaling</label>
