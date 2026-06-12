@@ -20,7 +20,7 @@ backend/models.py
 
 #frontend has its own .gitignore
 **/data/
-**/*.csv
+# **/*.csv
 **/tmp/
 **.err
 **.out
