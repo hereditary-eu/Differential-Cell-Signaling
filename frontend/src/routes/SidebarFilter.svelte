@@ -95,10 +95,12 @@
 			filterTFs: filterTFs.toString()
 		});
 		filteringQueryStr.set(`${query.toString()}`);
-		console.log('FILTERING QUERY TO STR');
-		console.log(filteringQueryStr);
+		// console.log('FILTERING QUERY TO STR');
+		// console.log(filteringQueryStr);
 		filtersApplied.set(true);
-		loadFilteredData(`${backend}/api/filtered_data?${query.toString()}`);
+		if ($selectedComparison) {
+			loadFilteredData(`${backend}/api/filtered_data?${query.toString()}`);
+		}
 	}
 </script>
 

@@ -4,13 +4,20 @@ from sqlalchemy import create_engine, Column, Integer, Float, String, ForeignKey
 from sqlalchemy.orm import Session, relationship, declarative_base
 import sys
 from pathlib import Path
-from .utils import aggregate_full_net#, find_cycles, expand_links_dataframe
+from utils import aggregate_full_net#, find_cycles, expand_links_dataframe
 import decoupler as dc
+import os
+from dotenv import load_dotenv
+load_dotenv() #take environment variables from backend/.env file
 
-DB_URL = 'postgresql+psycopg://postgres:postgres@localhost:5436/diffcellsig'
+#DB_URL = 'postgresql+psycopg://postgres:postgres@localhost:5436/diffcellsig'
+DB_URL = (
+    f"postgresql+psycopg2://"
+    f"{os.getenv('DB_USER', 'postgres')}:{os.getenv('DB_PASS', 'postgres')}"
+    f"@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '5432')}"
+    f"/{os.getenv('DB_NAME', 'diffcellsig')}"
+)
 Base = declarative_base() #serves as a factory for mapping Python classes to db tables in an ORM
-
-# TO DO: implement ingestion for user-uploaded case study
 
 class Link(Base):
     __tablename__ = 'links'
@@ -120,7 +127,10 @@ class CaseStudy():
         print(f"Dropped {ccc_before - len(self.ccc)} rows from CCC and {tf_before - len(self.tf)} from TFL due to missing cell types")
 
     def aggregate_data(self):
-        tf_db = dc.get_collectri(organism = self.organism, split_complexes = self.split_complexes)
+        if int(dc.__version__.split('.')[0]) < 2:
+            tf_db = dc.get_collectri(organism = self.organism, split_complexes = self.split_complexes)
+        else:
+            tf_db = dc.op.collectri(organism = self.organism, remove_complexes=self.split_complexes)
         tf_db = tf_db[
         (tf_db['source'].isin(self.tf['TF'].unique())) &
         (tf_db['target'].isin(self.ccc['ligand'].unique()))]

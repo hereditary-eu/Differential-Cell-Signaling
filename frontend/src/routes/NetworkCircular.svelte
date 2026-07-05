@@ -133,7 +133,7 @@
 		const src = d.source;
 		const end =
 			d.type === 'TFL' && $aesSettings.TF === 'endShape'
-				? trimPath(src, d.target, 14)
+				? trimPath(src, d.target, 15)
 				: { x: d.target.x, y: d.target.y };
 
 		const tgt = { x: end.x, y: end.y };
