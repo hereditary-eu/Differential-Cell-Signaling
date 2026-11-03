@@ -241,6 +241,9 @@
 					</div>
 				</div>
 			</div>
+			<div style="position: absolute; bottom: 0; padding: 1rem;">
+				<p>Research prototype of the HEREDITARY project. Not a medical device and not for clinical use. Do not enter personal or patient data.</p>
+			</div>
 		</aside>
 		<main class="flex-grow-1 p-4" id="graph-area">
 			<!-- marker definitions -->

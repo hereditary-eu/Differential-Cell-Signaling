@@ -1,5 +1,8 @@
 # Differential Signaling Visual Analytics Dashboard
 
+**Research use only. Not a medical device.** See [DISCLAIMER.md](DISCLAIMER.md) for intended use, data provenance and limitations.
+This software was developed in the HEREDITARY project as a research prototype. It has not been assessed or certified under the EU Medical Device Regulation (EU) 2017/745. It must not be used to diagnose, treat, monitor or make any other decision about individual patients.
+
 Interactive visual analytics framework for the exploration of differential cell-cell communication (CCC) and transcription factor (TF) activity inferred from single-cell RNA sequencing (scRNA-seq) data.
 
 The dashboard integrates intercellular communication, intracellular signaling cascades, TF regulation, and functional enrichment analysis into a unified multi-layer network representation supporting the identification of candidate disease drivers, altered signaling loops, and dysregulated regulatory programs.
@@ -41,3 +44,7 @@ The dashboard currently includes:
 - Frontend: Svelte + D3.js
 - Backend: Python + FastAPI
 - Database: PostgreSQL
+
+## Acknowledgement
+
+Funded by the European Union under grant agreement No 101137074 (HEREDITARY). Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or the European Health and Digital Executive Agency (HaDEA). Neither the European Union nor the granting authority can be held responsible for them.
