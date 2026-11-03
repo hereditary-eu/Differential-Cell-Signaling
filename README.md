@@ -1,7 +1,7 @@
 # Differential Signaling Visual Analytics Dashboard
 
-**Research use only. Not a medical device.** See [DISCLAIMER.md](DISCLAIMER.md) for intended use, data provenance and limitations.
-This software was developed in the HEREDITARY project as a research prototype. It has not been assessed or certified under the EU Medical Device Regulation (EU) 2017/745. It must not be used to diagnose, treat, monitor or make any other decision about individual patients.
+> **Research use only. Not a medical device.** See [DISCLAIMER.md](DISCLAIMER.md) for intended use, data provenance and limitations.
+> This software was developed in the HEREDITARY project as a research prototype. It has not been assessed or certified under the EU Medical Device Regulation (EU) 2017/745. It must not be used to diagnose, treat, monitor or make any other decision about individual patients.
 
 Interactive visual analytics framework for the exploration of differential cell-cell communication (CCC) and transcription factor (TF) activity inferred from single-cell RNA sequencing (scRNA-seq) data.
 
