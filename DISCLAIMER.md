@@ -3,10 +3,6 @@
 **Research use only. Not a medical device.**
 This software was developed in the HEREDITARY project as a research prototype. It has not been assessed or certified under the EU Medical Device Regulation (EU) 2017/745. It must not be used to diagnose, treat, monitor or make any other decision about individual patients.
 
-<!-- DONE -->
-<!-- For demos and web applications, also show this line in the user interface:
-"Research prototype of the HEREDITARY project. Not a medical device and not for clinical use. Do not enter personal or patient data." -->
-
 ## 1. Overview
 
 | Field                       | Value                                                                                                                                                |
@@ -16,7 +12,7 @@ This software was developed in the HEREDITARY project as a research prototype. I
 | Type                        | Demo or web application                                                                                                                              |
 | Owner partner and contact   | Institute of Visual Computing (IVC), TU Graz, Department of Information Engineering, University of Padova, Gaia Tussardi, gaia.tussardi@phd.unipd.it |
 | License                     | MIT, see LICENSE file                                                                                                                                |
-| Repository and DOI          | currently pending                                                                                                                                    |
+| Repository and DOI          | Repository: https://github.com/hereditary-eu/Differential-Cell-Signaling/tree/master - DOI: not yet available                                        |
 | Release date                | 01-06-2026                                                                                                                                           |
 | Related task or deliverable | WP5, T5.1, T5.4, D5.7, D5.1/D5.2                                                                                                                     |
 | How to cite                 | pending                                                                                                                                              |
